@@ -10,7 +10,7 @@ library(nlme)
 ##############################################################
 
 ## Set Date
-DATE <- "20150226"
+DATE <- "20150413"
 
 # ## TSCC Paths
 # PathToData <- "/projects/janssen/clinical/"
@@ -26,352 +26,453 @@ TAB <- read.table( PathToData, sep="\t",header=T )
 # Get unique Weeks for plotting purposes
 WKS <- unique( TAB$WK )
 
+## Load Candidate Genotype Files
+COMP <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/CND_LT8_DEL_MNe_MN_DAS_BL_MN_PC1_PC2.compile.short", sep="\t",header=T)
+RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw", sep="",header=T)
+
 ##############################################################
 ## LINEAR MODELS #############################################
 ##############################################################
+LM <- list()
 
 ## Basic Linear Model w/ only DRUG effect
-LM.1 <- lm( DAS ~ DRUG, data=TAB )
-summary(LM.1)
+LM$LM.1 <- lm( DAS ~ DRUG, data=TAB )
+summary(LM$LM.1)
 
 ## Add DRUG*SEX Interaction
-LM.2 <- lm( DAS ~ DRUG*SEX, data=TAB )
-summary(LM.2)
+LM$LM.2 <- lm( DAS ~ DRUG*SEX, data=TAB )
+summary(LM$LM.2)
 ## Change to DRUG+SEX
-LM.2a <- lm( DAS ~ DRUG+SEX, data=TAB )
-summary(LM.2a)
+LM$LM.2a <- lm( DAS ~ DRUG+SEX, data=TAB )
+summary(LM$LM.2a)
 
 ## Remove SEX, add DRUG*AGE
-LM.3 <- lm( DAS ~ DRUG*AGE, data=TAB )
-summary(LM.3)
+LM$LM.3 <- lm( DAS ~ DRUG*AGE, data=TAB )
+summary(LM$LM.3)
 ## Change to DRUG+AGE
-LM.3a <- lm( DAS ~ DRUG+AGE, data=TAB )
-summary(LM.3a)
+LM$LM.3a <- lm( DAS ~ DRUG+AGE, data=TAB )
+summary(LM$LM.3a)
 
 ## Remove SEX, add DRUG*DIS_DUR
-LM.4 <- lm( DAS ~ DRUG*DIS_DUR, data=TAB )
-summary(LM.4)
+LM$LM.4 <- lm( DAS ~ DRUG*DIS_DUR, data=TAB )
+summary(LM$LM.4)
 ## Change to DRUG+DIS_DUR
-LM.4a <- lm( DAS ~ DRUG+DIS_DUR, data=TAB )
-summary(LM.4a)
+LM$LM.4a <- lm( DAS ~ DRUG+DIS_DUR, data=TAB )
+summary(LM$LM.4a)
 
 ## Remove DIS_DUR, add DRUG*HT
-LM.5 <- lm( DAS ~ DRUG*HT, data=TAB )
-summary(LM.5)
+LM$LM.5 <- lm( DAS ~ DRUG*HT, data=TAB )
+summary(LM$LM.5)
 ## Change to DRUG+HT
-LM.5a <- lm( DAS ~ DRUG+HT, data=TAB )
-summary(LM.5a)
+LM$LM.5a <- lm( DAS ~ DRUG+HT, data=TAB )
+summary(LM$LM.5a)
 
 ## Change to DRUG*WT
-LM.6 <- lm( DAS ~ DRUG*WT, data=TAB )
-summary(LM.6)
+LM$LM.6 <- lm( DAS ~ DRUG*WT, data=TAB )
+summary(LM$LM.6)
 ## Change to DRUG+WT
-LM.6a <- lm( DAS ~ DRUG+WT, data=TAB )
-summary(LM.6a)
+LM$LM.6a <- lm( DAS ~ DRUG+WT, data=TAB )
+summary(LM$LM.6a)
 
 ## Change to DRUG*BMI
-LM.7 <- lm( DAS ~ DRUG*BMI, data=TAB )
-summary(LM.7)
+LM$LM.7 <- lm( DAS ~ DRUG*BMI, data=TAB )
+summary(LM$LM.7)
 ## Change to DRUG+BMI
-LM.7a <- lm( DAS ~ DRUG+BMI, data=TAB )
-summary(LM.7a)
+LM$LM.7a <- lm( DAS ~ DRUG+BMI, data=TAB )
+summary(LM$LM.7a)
 
 ## Change to DRUG*ACPA
-LM.8 <- lm( DAS ~ DRUG*ACPA, data=TAB, subset=ACPA!="" )
-summary(LM.8)
+LM$LM.8 <- lm( DAS ~ DRUG*ACPA, data=TAB, subset=ACPA!="" )
+summary(LM$LM.8)
 ## Change to DRUG+ACPA
-LM.8a <- lm( DAS ~ DRUG+ACPA, data=TAB, subset=ACPA!="" )
-summary(LM.8a)
+LM$LM.8a <- lm( DAS ~ DRUG+ACPA, data=TAB, subset=ACPA!="" )
+summary(LM$LM.8a)
 
 ## Change to DRUG*RF
-LM.9 <- lm( DAS ~ DRUG*RF, data=TAB )
-summary(LM.9)
+LM$LM.9 <- lm( DAS ~ DRUG*RF, data=TAB )
+summary(LM$LM.9)
 ## Change to DRUG+RF
-LM.9a <- lm( DAS ~ DRUG+RF, data=TAB )
-summary(LM.9a)
+LM$LM.9a <- lm( DAS ~ DRUG+RF, data=TAB )
+summary(LM$LM.9a)
 
 ## Change to DRUG*RF_ACPA
-LM.10 <- lm( DAS ~ DRUG*RF_ACPA, data=TAB )
-summary(LM.10)
+LM$LM.10 <- lm( DAS ~ DRUG*RF_ACPA, data=TAB )
+summary(LM$LM.10)
 ## Change to DRUG+RF_ACPA
-LM.10a <- lm( DAS ~ DRUG+RF_ACPA, data=TAB )
-summary(LM.10a)
+LM$LM.10a <- lm( DAS ~ DRUG+RF_ACPA, data=TAB )
+summary(LM$LM.10a)
 
 ## Change to DRUG*WK
-LM.11 <- lm( DAS ~ DRUG*WK, data=TAB )
-summary(LM.11)
+LM$LM.11 <- lm( DAS ~ DRUG*WK, data=TAB )
+summary(LM$LM.11)
 ## Change to DRUG+WK
-LM.11a <- lm( DAS ~ DRUG+WK, data=TAB )
-summary(LM.11a)
+LM$LM.11a <- lm( DAS ~ DRUG+WK, data=TAB )
+summary(LM$LM.11a)
 
 ## Include PLAC (all 2-way interactions)
-LM.12 <- lm( DAS ~ (DRUG+WK+PLAC)^2, data=TAB )
-summary(LM.12)
+LM$LM.12 <- lm( DAS ~ (DRUG+WK+PLAC)^2, data=TAB )
+summary(LM$LM.12)
 ## Include PLAC (2-way interactions w/o PLAC:DRUG)
-LM.12a <- lm( DAS ~ DRUG*WK+PLAC+PLAC:WK, data=TAB )
-summary(LM.12a)
+LM$LM.12a <- lm( DAS ~ DRUG*WK+PLAC+PLAC:WK, data=TAB )
+summary(LM$LM.12a)
 ## Include PLAC (w/o PLAC interactions)
-LM.12b <- lm( DAS ~ DRUG*WK+PLAC, data=TAB )
-summary(LM.12b)
+LM$LM.12b <- lm( DAS ~ DRUG*WK+PLAC, data=TAB )
+summary(LM$LM.12b)
 
 ## Use 12b, add SEX interactions
-LM.13 <- lm( DAS ~ SEX*(DRUG*WK+PLAC), data=TAB )
-summary(LM.13)
+LM$LM.13 <- lm( DAS ~ (DRUG*WK+PLAC)*SEX, data=TAB )
+summary(LM$LM.13)
 ## Remove SEX:DRUG:WK
-LM.13a <- lm( DAS ~ SEX*(DRUG*WK+PLAC)-SEX:DRUG:WK, data=TAB )
-summary(LM.13a)
+LM$LM.13a <- lm( DAS ~ (DRUG*WK+PLAC)*SEX-DRUG:SEX:WK, data=TAB )
+summary(LM$LM.13a)
 ## Remove SEX:WK
-LM.13b <- lm( DAS ~ SEX*(DRUG*WK+PLAC)-SEX:DRUG:WK-SEX:WK, data=TAB )
-summary(LM.13b)
+LM$LM.13b <- lm( DAS ~ (DRUG*WK+PLAC)*SEX-DRUG:SEX:WK-SEX:WK, data=TAB )
+summary(LM$LM.13b)
 ## Remove SEX:PLAC
-LM.13c <- lm( DAS ~ (DRUG*WK+PLAC)+SEX*DRUG, data=TAB )
-summary(LM.13c)
+LM$LM.13c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*SEX, data=TAB )
+summary(LM$LM.13c)
 ## Remove SEX:DRUG
-LM.13d <- lm( DAS ~ (DRUG*WK+PLAC)+SEX, data=TAB )
-summary(LM.13d)
+LM$LM.13d <- lm( DAS ~ (DRUG*WK+PLAC)+SEX, data=TAB )
+summary(LM$LM.13d)
 
 ## Use 12b, add RF_ACPA interactions
-LM.14 <- lm( DAS ~ RF_ACPA*(DRUG*WK+PLAC), data=TAB )
-summary(LM.14)
+LM$LM.14 <- lm( DAS ~ (DRUG*WK+PLAC)*RF_ACPA, data=TAB )
+summary(LM$LM.14)
 ## Remove RF_ACPA:DRUG:WK
-LM.14a <- lm( DAS ~ RF_ACPA*(DRUG*WK+PLAC)-RF_ACPA:DRUG:WK, data=TAB )
-summary(LM.14a)
+LM$LM.14a <- lm( DAS ~ (DRUG*WK+PLAC)*RF_ACPA-DRUG:RF_ACPA:WK, data=TAB )
+summary(LM$LM.14a)
 ## Remove RF_ACPA:WK
-LM.14b <- lm( DAS ~ RF_ACPA*(DRUG*WK+PLAC)-RF_ACPA:DRUG:WK-RF_ACPA:WK, data=TAB )
-summary(LM.14b)
+LM$LM.14b <- lm( DAS ~ (DRUG*WK+PLAC)*RF_ACPA-DRUG:RF_ACPA:WK-RF_ACPA:WK, data=TAB )
+summary(LM$LM.14b)
 ## Remove RF_ACPA:PLAC
-LM.14c <- lm( DAS ~ (DRUG*WK+PLAC)+RF_ACPA*DRUG, data=TAB )
-summary(LM.14c)
+LM$LM.14c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, data=TAB )
+summary(LM$LM.14c)
 ## Remove RF_ACPA:DRUG
-LM.14d <- lm( DAS ~ (DRUG*WK+PLAC)+RF_ACPA, data=TAB )
-summary(LM.14d)
+LM$LM.14d <- lm( DAS ~ (DRUG*WK+PLAC)+RF_ACPA, data=TAB )
+summary(LM$LM.14d)
 
 ## Use 12b, add DIS_DUR interactions
-LM.15 <- lm( DAS ~ DIS_DUR*(DRUG*WK+PLAC), data=TAB )
-summary(LM.15)
+LM$LM.15 <- lm( DAS ~ (DRUG*WK+PLAC)*DIS_DUR, data=TAB )
+summary(LM$LM.15)
 ## Remove DIS_DUR:DRUG:WK
-LM.15a <- lm( DAS ~ DIS_DUR*(DRUG*WK+PLAC)-DIS_DUR:DRUG:WK, data=TAB )
-summary(LM.15a)
+LM$LM.15a <- lm( DAS ~ (DRUG*WK+PLAC)*DIS_DUR-DRUG:DIS_DUR:WK, data=TAB )
+summary(LM$LM.15a)
 ## Remove DIS_DUR:WK
-LM.15b <- lm( DAS ~ DIS_DUR*(DRUG*WK+PLAC)-DIS_DUR:DRUG:WK-DIS_DUR:WK, data=TAB )
-summary(LM.15b)
+LM$LM.15b <- lm( DAS ~ (DRUG*WK+PLAC)*DIS_DUR-DRUG:DIS_DUR:WK-DIS_DUR:WK, data=TAB )
+summary(LM$LM.15b)
 ## Remove DIS_DUR:PLAC
-LM.15c <- lm( DAS ~ (DRUG*WK+PLAC)+DIS_DUR*DRUG, data=TAB )
-summary(LM.15c)
+LM$LM.15c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*DIS_DUR, data=TAB )
+summary(LM$LM.15c)
 ## Remove DIS_DUR:DRUG
-LM.15d <- lm( DAS ~ (DRUG*WK+PLAC)+DIS_DUR, data=TAB )
-summary(LM.15d)
+LM$LM.15d <- lm( DAS ~ (DRUG*WK+PLAC)+DIS_DUR, data=TAB )
+summary(LM$LM.15d)
 
 ## Use 12b, add BMI interactions
-LM.16 <- lm( DAS ~ BMI*(DRUG*WK+PLAC), data=TAB )
-summary(LM.16)
+LM$LM.16 <- lm( DAS ~ (DRUG*WK+PLAC)*BMI, data=TAB )
+summary(LM$LM.16)
 ## Remove BMI:DRUG:WK
-LM.16a <- lm( DAS ~ BMI*(DRUG*WK+PLAC)-BMI:DRUG:WK, data=TAB )
-summary(LM.16a)
+LM$LM.16a <- lm( DAS ~ (DRUG*WK+PLAC)*BMI-DRUG:BMI:WK, data=TAB )
+summary(LM$LM.16a)
 ## Remove BMI:WK
-LM.16b <- lm( DAS ~ BMI*(DRUG*WK+PLAC)-BMI:DRUG:WK-BMI:WK, data=TAB )
-summary(LM.16b)
+LM$LM.16b <- lm( DAS ~ (DRUG*WK+PLAC)*BMI-DRUG:BMI:WK-BMI:WK, data=TAB )
+summary(LM$LM.16b)
 ## Remove BMI:PLAC
-LM.16c <- lm( DAS ~ (DRUG*WK+PLAC)+BMI*DRUG, data=TAB )
-summary(LM.16c)
+LM$LM.16c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*BMI, data=TAB )
+summary(LM$LM.16c)
 ## Remove BMI:DRUG
-LM.16d <- lm( DAS ~ (DRUG*WK+PLAC)+BMI, data=TAB )
-summary(LM.16d)
+LM$LM.16d <- lm( DAS ~ (DRUG*WK+PLAC)+BMI, data=TAB )
+summary(LM$LM.16d)
+
+
+################################################
+## Compile Info about all Models
+
+## Specify Number and Names of Models
+LM.N.models <- length(LM)
+LM.Names.models <- names(LM)
+
+## Get all Terms used in any model
+LM.terms <- Reduce( union, lapply( LM, function(x) names(coef(x)) ) )
+# LM.terms <- sort( LM.terms )
+LM.N.terms <- length(LM.terms)
+
+## Determine which Terms are in each model
+LM.ARR.terms <- array( 0, c(LM.N.terms,LM.N.models) )
+LM.ARR.terms.p <- array( 1, c(LM.N.terms,LM.N.models) )
+colnames(LM.ARR.terms) <- colnames(LM.ARR.terms.p) <- LM.Names.models
+rownames(LM.ARR.terms) <- rownames(LM.ARR.terms.p) <- LM.terms
+for ( m in 1:length(LM) ) {
+	mod <- names(LM)[m]
+	which.in <- which( LM.terms %in% names(coef(LM[[mod]])) )
+	which.terms <- LM.terms[which.in]
+	LM.ARR.terms[which.in,mod] <- 1
+	which.terms.2 <- which.terms[ which( which.terms %in% rownames(summary(LM[[mod]])$coefficients) ) ]
+	which.in.2 <- which( LM.terms %in% which.terms.2 )
+	LM.ARR.terms.p[which.in.2,mod] <- summary(LM[[mod]])$coefficients[which.terms.2,"Pr(>|t|)"]
+}
+ # Presence of each Term
+# COLS <- c("black","green")
+# heatmap.2( LM.ARR.terms, trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(5,10) )
+ # P-Values for each Term
+COLS.list <- c("firebrick1","chocolate1","gold1","springgreen2","steelblue2","slateblue3","black")
+COLS <- c( "firebrick1",colorRampPalette(COLS.list[3:7])(19) ) # colorRampPalette(COLS.list)(20)
+ROW.COLS <- rep("deepskyblue2",LM.N.terms) ; ROW.COLS[grep("DRUG",LM.terms)] <- "chartreuse2"
+png( paste(PathToPlot,"1-LM_ModBuild.png",sep="/"), height=1200,width=1600,pointsize=30 )
+# heatmap.2( LM.ARR.terms.p, trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(5,10),RowSideColors=ROW.COLS )
+heatmap.2( LM.ARR.terms.p, main="Inclusion/Significance of Terms in Models",xlab="Model",ylab="Term",trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(6,11),lhei=c(2,9),lwid=c(1,6),RowSideColors=ROW.COLS )
+dev.off()
+
+## Determine which models have DRUG interactions
+LM.drugint <- as.numeric(unlist( lapply( LM, function(x) any(grepl( "DRUG:|:DRUG", names(coef(x)) ))) ))
 
 
 ##############################################################
 ## LMM MODELS ################################################
 ##############################################################
-
+LME <- list()
 ## When using ANOVA to compare models:
  # Greater (less negative) logLik is better model
  # Smaller (less positive) AIC/BIC is better model
 
 ## Linear Mixed Model w/ only DRUG effect
-LME.1 <- lme( fixed = DAS ~ DRUG, random = ~ 1 | IID, data=TAB )
-summary(LME.1)
+LME$LME.1 <- lme( fixed = DAS ~ DRUG, random = ~ 1 | IID, data=TAB )
+summary(LME$LME.1)
 ## Add Drug as Random Effect
-LME.1b <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID, data=TAB )
-summary(LME.1b)
-anova(LME.1,LME.1b)
- # Choose LME.2
+LME$LME.1b <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.1b)
+## Add Nested Random Effect w/ IID/DRUG
+LME$LME.1c <- lme( fixed = DAS ~ DRUG, random = ~ 1 | IID/DRUG, data=TAB )
+summary(LME$LME.1c)
+anova(LME$LME.1,LME$LME.1b,LME$LME.1c)
+ # Choose LME$LME.1b b/c has lowest AIC/BIC and less negative logLik
+## Add Nested Random Effect w/ IID/DRUG
+LME$LME.1d <- lme( fixed = DAS ~ DRUG, random = ~ DRUG-1 | IID, data=TAB )
+summary(LME$LME.1d)
+anova(LME$LME.1b,LME$LME.1d)
+ # Choose LME$LME.1b b/c has lowest AIC/BIC and less negative logLik
 
 ## Add DRUG*SEX Interaction
-LME.2 <- lme( fixed = DAS ~ DRUG*SEX, random = ~ DRUG | IID, data=TAB )
-summary(LME.2)
+LME$LME.2 <- lme( fixed = DAS ~ DRUG*SEX, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.2)
 ## Change to DRUG+SEX
-LME.2a <- lme( fixed = DAS ~ DRUG+SEX, random = ~ DRUG | IID, data=TAB )
-summary(LME.2a)
+LME$LME.2a <- lme( fixed = DAS ~ DRUG+SEX, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.2a)
 
 ## Change to DRUG*AGE
-LME.3 <- lme( fixed = DAS ~ DRUG*AGE, random = ~ DRUG | IID, data=TAB )
-summary(LME.3)
+LME$LME.3 <- lme( fixed = DAS ~ DRUG*AGE, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.3)
 ## Change to DRUG+AGE
-LME.3a <- lme( fixed = DAS ~ DRUG+AGE, random = ~ DRUG | IID, data=TAB )
-summary(LME.3a)
+LME$LME.3a <- lme( fixed = DAS ~ DRUG+AGE, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.3a)
 
 ## Change to DRUG*DIS_DUR
-LME.4 <- lme( fixed = DAS ~ DRUG*DIS_DUR, random = ~ DRUG | IID, data=TAB )
-summary(LME.4)
+LME$LME.4 <- lme( fixed = DAS ~ DRUG*DIS_DUR, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.4)
 ## Change to DRUG+DIS_DUR
-LME.4a <- lme( fixed = DAS ~ DRUG+DIS_DUR, random = ~ DRUG | IID, data=TAB )
-summary(LME.4a)
+LME$LME.4a <- lme( fixed = DAS ~ DRUG+DIS_DUR, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.4a)
 
 ## Remove DIS_DUR, add DRUG*HT
-LME.5 <- lme( fixed = DAS ~ DRUG*HT, random = ~ DRUG | IID, data=TAB )
-summary(LME.5)
+LME$LME.5 <- lme( fixed = DAS ~ DRUG*HT, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.5)
 ## Change to DRUG+HT
-LME.5a <- lme( fixed = DAS ~ DRUG+HT, random = ~ DRUG | IID, data=TAB )
-summary(LME.5a)
+LME$LME.5a <- lme( fixed = DAS ~ DRUG+HT, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.5a)
 
 ## Change to DRUG*WT
-LME.6 <- lme( fixed = DAS ~ DRUG*WT, random = ~ DRUG | IID, data=TAB )
-summary(LME.6)
+LME$LME.6 <- lme( fixed = DAS ~ DRUG*WT, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.6)
 ## Change to DRUG+WT
-LME.6a <- lme( fixed = DAS ~ DRUG+WT, random = ~ DRUG | IID, data=TAB )
-summary(LME.6a)
+LME$LME.6a <- lme( fixed = DAS ~ DRUG+WT, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.6a)
 
 ## Change to DRUG*BMI
-LME.7 <- lme( fixed = DAS ~ DRUG*BMI, random = ~ DRUG | IID, data=TAB )
-summary(LME.7)
+LME$LME.7 <- lme( fixed = DAS ~ DRUG*BMI, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.7)
 ## Change to DRUG+BMI
-LME.7a <- lme( fixed = DAS ~ DRUG+BMI, random = ~ DRUG | IID, data=TAB )
-summary(LME.7a)
+LME$LME.7a <- lme( fixed = DAS ~ DRUG+BMI, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.7a)
 
 ## Change to DRUG*ACPA
-LME.8 <- lme( fixed = DAS ~ DRUG*ACPA, random = ~ DRUG | IID, data=TAB, subset=ACPA!="" )
-summary(LME.8)
+LME$LME.8 <- lme( fixed = DAS ~ DRUG*ACPA, random = ~ DRUG | IID, data=TAB, subset=ACPA!="" )
+summary(LME$LME.8)
 ## Change to DRUG+ACPA
-LME.8a <- lme( fixed = DAS ~ DRUG+ACPA, random = ~ DRUG | IID, data=TAB, subset=ACPA!="" )
-summary(LME.8a)
+LME$LME.8a <- lme( fixed = DAS ~ DRUG+ACPA, random = ~ DRUG | IID, data=TAB, subset=ACPA!="" )
+summary(LME$LME.8a)
 
 ## Change to DRUG*RF
-LME.9 <- lme( fixed = DAS ~ DRUG*RF, random = ~ DRUG | IID, data=TAB )
-summary(LME.9)
+LME$LME.9 <- lme( fixed = DAS ~ DRUG*RF, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.9)
 ## Change to DRUG+RF
-LME.9a <- lme( fixed = DAS ~ DRUG+RF, random = ~ DRUG | IID, data=TAB )
-summary(LME.9a)
+LME$LME.9a <- lme( fixed = DAS ~ DRUG+RF, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.9a)
 
 ## Change to DRUG*RF_ACPA
-LME.10 <- lme( fixed = DAS ~ DRUG*RF_ACPA, random = ~ DRUG | IID, data=TAB )
-summary(LME.10)
+LME$LME.10 <- lme( fixed = DAS ~ DRUG*RF_ACPA, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.10)
 ## Change to DRUG+RF_ACPA
-LME.10a <- lme( fixed = DAS ~ DRUG+RF_ACPA, random = ~ DRUG | IID, data=TAB )
-summary(LME.10a)
+LME$LME.10a <- lme( fixed = DAS ~ DRUG+RF_ACPA, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.10a)
 
 ## Change to DRUG*WK
-LME.11 <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | IID, data=TAB )
-summary(LME.11)
+LME$LME.11 <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.11) # *** WK & DRUG:WK terms are 99% correlated
 ## Change to DRUG+WK
-LME.11a <- lme( fixed = DAS ~ DRUG+WK, random = ~ DRUG | IID, data=TAB )
-summary(LME.11a)
-## Back to DRUG*WK, add WK & DRUG*WK as Random Effect
-LME.11b <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.11b)
-anova(LME.11,LME.11b)
+LME$LME.11a <- lme( fixed = DAS ~ DRUG+WK, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.11a)
+## Back to DRUG*WK, add WK & DRUG+WK as Random Effect
+LME$LME.11b <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.11b)
+## Back to DRUG+WK, add WK & DRUG+WK as Random Effect
+LME$LME.11c <- lme( fixed = DAS ~ DRUG+WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.11c)
+anova(LME$LME.11a,LME$LME.11c)
 
 ## Include PLAC (all 2-way interactions)
-LME.12 <- lme( fixed = DAS ~ (DRUG+WK+PLAC)^2, random = ~ DRUG | IID, data=TAB )
-summary(LME.12)
+# LME$LME.12 <- lme( fixed = DAS ~ (DRUG+WK+PLAC)^2, random = ~ DRUG | IID, data=TAB )
+# summary(LME$LME.12)
 ## Include PLAC (2-way interactions w/o PLAC:DRUG)
-LME.12a <- lme( fixed = DAS ~ DRUG*WK+PLAC+PLAC:WK, random = ~ DRUG | IID, data=TAB )
-summary(LME.12a)
+# LME$LME.12a <- lme( fixed = DAS ~ DRUG*WK+PLAC+PLAC:WK, random = ~ DRUG | IID, data=TAB )
+# summary(LME$LME.12a)
 ## Include PLAC (w/o PLAC interactions)
-LME.12b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.12b)
+LME$LME.12b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.12b)
 ## Add PLAC as Random Effect
-LME.12c <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK+PLAC | IID, data=TAB )
-summary(LME.12c) # !!! DID NOT CONVERGE !!!
+# LME$LME.12c <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK+PLAC | IID, data=TAB )
+# summary(LME$LME.12c) # !!! DID NOT CONVERGE !!!
 ## Try w/ only DRUG as Random Effect
-LME.12d <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG | IID, data=TAB )
-summary(LME.12d)
-anova(LME.12b,LME.12d) # Stick w/ WK in Random Effects (b)
+LME$LME.12d <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG | IID, data=TAB )
+summary(LME$LME.12d)
+anova(LME$LME.12b,LME$LME.12d) # Stick w/ WK in Random Effects (b)
 
 ## Use 12b, add SEX interactions
-LME.13 <- lme( fixed = DAS ~ SEX*(DRUG*WK+PLAC), random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.13)
+LME$LME.13 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*SEX, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.13)
 ## Remove SEX:DRUG:WK
-LME.13a <- lme( fixed = DAS ~ SEX*(DRUG*WK+PLAC)-SEX:DRUG:WK, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.13a)
+LME$LME.13a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*SEX-DRUG:SEX:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.13a)
 ## Remove SEX:WK
-LME.13b <- lme( fixed = DAS ~ SEX*(DRUG*WK+PLAC)-SEX:DRUG:WK-SEX:WK, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.13b)
+LME$LME.13b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*SEX-DRUG:SEX:WK-SEX:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.13b)
 ## Remove SEX:PLAC
-LME.13c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+SEX*DRUG, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.13c)
+LME$LME.13c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*SEX, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.13c)
 ## Remove SEX:DRUG
-LME.13d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+SEX, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.13d)
+LME$LME.13d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+SEX, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.13d)
  # !!! No effect of SEX at all !!!
 
 ## Use 12b, add RF_ACPA interactions
-LME.14 <- lme( fixed = DAS ~ RF_ACPA*(DRUG*WK+PLAC), random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.14)
+LME$LME.14 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF_ACPA, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.14)
 ## Remove RF_ACPA:DRUG:WK
-LME.14a <- lme( fixed = DAS ~ RF_ACPA*(DRUG*WK+PLAC)-RF_ACPA:DRUG:WK, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.14a)
+LME$LME.14a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF_ACPA-DRUG:RF_ACPA:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.14a)
 ## Remove RF_ACPA:WK
-LME.14b <- lme( fixed = DAS ~ RF_ACPA*(DRUG*WK+PLAC)-RF_ACPA:DRUG:WK-RF_ACPA:WK, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.14b)
+LME$LME.14b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF_ACPA-DRUG:RF_ACPA:WK-RF_ACPA:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.14b)
 ## Remove RF_ACPA:PLAC
-LME.14c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+RF_ACPA*DRUG, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.14c)
+LME$LME.14c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.14c)
 ## Remove RF_ACPA:DRUG
-LME.14d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+RF_ACPA, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.14d)
+LME$LME.14d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+RF_ACPA, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.14d)
 ## Include RF_ACPA as Grouping
-LME.14c1 <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | RF_ACPA/IID, data=TAB )
-summary(LME.14c1) ## Didn't Converge...first try...try again...
+# LME$LME.14ca <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | RF_ACPA/IID, data=TAB )
+# summary(LME$LME.14ca) ## Didn't Converge...first try...try again...
 ## Include RF_ACPA as Random Effect
-LME.14da <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+RF_ACPA, random = ~ DRUG+WK | RF_ACPA/IID, data=TAB )
-summary(LME.14da)
+# LME$LME.14da <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+RF_ACPA, random = ~ DRUG+WK | RF_ACPA/IID, data=TAB )
+# summary(LME$LME.14da)
 ## Decide: w/ or w/o RF_ACPA:DRUG interaction??
-cor(data.frame( TAB$DAS, predict(LME.14c), predict(LME.14d) ))
-sd(resid(LME.14c)) ; sd(resid(LME.14d)) ; sd(resid(LME.12b))
+cor(data.frame( TAB$DAS, predict(LME$LME.14c), predict(LME$LME.14d) ))
+sd(resid(LME$LME.14c)) ; sd(resid(LME$LME.14d)) ; sd(resid(LME$LME.12b))
  # !!! Include RF_ACPA, but not RF_ACPA:DRUG !!!
 
 ## Use 12b, add DIS_DUR interactions
-LME.15 <- lme( fixed = DAS ~ DIS_DUR*(DRUG*WK+PLAC), random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.15)
+LME$LME.15 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.15)
 ## Remove DIS_DUR:DRUG:WK
-LME.15a <- lme( fixed = DAS ~ DIS_DUR*(DRUG*WK+PLAC)-DIS_DUR:DRUG:WK, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.15a)
+LME$LME.15a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*DIS_DUR-DRUG:DIS_DUR:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.15a)
 ## Remove DIS_DUR:WK
-LME.15b <- lme( fixed = DAS ~ DIS_DUR*(DRUG*WK+PLAC)-DIS_DUR:DRUG:WK-DIS_DUR:WK, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.15b)
+LME$LME.15b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*DIS_DUR-DRUG:DIS_DUR:WK-DIS_DUR:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.15b)
 ## Remove DIS_DUR:PLAC
-LME.15c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DIS_DUR*DRUG, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.15c)
+LME$LME.15c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.15c)
 ## Remove DIS_DUR:DRUG
-LME.15d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.15d)
+LME$LME.15d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.15d)
 ## Decide: w/ or w/o RF_ACPA:DRUG interaction??
-cor(data.frame( TAB$DAS, predict(LME.15b), predict(LME.15c), predict(LME.15d) ))
-sd(resid(LME.15b)) ; sd(resid(LME.15c)) ; sd(resid(LME.15d)) ; sd(resid(LME.12b))
+cor(data.frame( TAB$DAS, predict(LME$LME.15b), predict(LME$LME.15c), predict(LME$LME.15d) ))
+sd(resid(LME$LME.15b)) ; sd(resid(LME$LME.15c)) ; sd(resid(LME$LME.15d)) ; sd(resid(LME$LME.12b))
  # !!! Include ... !!!
 
 ## Use 12b, add BMI interactions
-LME.16 <- lme( fixed = DAS ~ BMI*(DRUG*WK+PLAC), random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.16)
+LME$LME.16 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*BMI, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.16)
 ## Remove BMI:DRUG:WK
-LME.16a <- lme( fixed = DAS ~ BMI*(DRUG*WK+PLAC)-BMI:DRUG:WK, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.16a)
+LME$LME.16a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*BMI-DRUG:BMI:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.16a)
 ## Remove BMI:WK
-LME.16b <- lme( fixed = DAS ~ BMI*(DRUG*WK+PLAC)-BMI:DRUG:WK-BMI:WK, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.16b)
+LME$LME.16b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*BMI-DRUG:BMI:WK-BMI:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.16b)
 ## Remove BMI:PLAC
-LME.16c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+BMI*DRUG, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.16c)
+LME$LME.16c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*BMI, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.16c)
 ## Remove BMI:DRUG
-LME.16d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+BMI, random = ~ DRUG+WK | IID, data=TAB )
-summary(LME.16d)
+LME$LME.16d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+BMI, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.16d)
 ## Decide: w/ or w/o RF_ACPA:DRUG interaction??
-cor(data.frame( TAB$DAS, predict(LME.16b), predict(LME.16c), predict(LME.16d) ))
-sd(resid(LME.16b)) ; sd(resid(LME.16c)) ; sd(resid(LME.16d)) ; sd(resid(LME.12b))
+cor(data.frame( TAB$DAS, predict(LME$LME.16b), predict(LME$LME.16c), predict(LME$LME.16d) ))
+sd(resid(LME$LME.16b)) ; sd(resid(LME$LME.16c)) ; sd(resid(LME$LME.16d)) ; sd(resid(LME$LME.12b))
  # !!! Include ... !!!
 
-head(coef(LME.12b))
-head(coef(LME.14b))
+head(coef(LME$LME.12b))
+head(coef(LME$LME.14b))
+
+################################################
+## Compile Info about all Models
+
+## Specify Number and Names of Models
+LME.N.models <- length(LME)
+LME.Names.models <- names(LME)
+
+## Get all Terms used in any model
+LME.terms <- Reduce( union, lapply( LME, function(x) colnames(coef(x)) ) )
+# LME.terms <- sort( LME.terms )
+LME.N.terms <- length(LME.terms)
+
+## Determine which Terms are in each model
+LME.ARR.terms <- array( 0, c(LME.N.terms,LME.N.models) )
+LME.ARR.terms.p <- array( 1, c(LME.N.terms,LME.N.models) )
+colnames(LME.ARR.terms) <- colnames(LME.ARR.terms.p) <- LME.Names.models
+rownames(LME.ARR.terms) <- rownames(LME.ARR.terms.p) <- LME.terms
+for ( m in 1:length(LME) ) {
+	mod <- names(LME)[m]
+	which.in <- which( LME.terms %in% colnames(coef(LME[[mod]])) )
+	which.terms <- LME.terms[which.in]
+	LME.ARR.terms[which.in,mod] <- 1
+	which.terms.2 <- which.terms[ which( which.terms %in% rownames(summary(LME[[mod]])$tTable) ) ]
+	which.in.2 <- which( LME.terms %in% which.terms.2 )
+	LME.ARR.terms.p[which.in.2,mod] <- summary(LME[[mod]])$tTable[which.terms.2,"p-value"]
+}
+ # Presence of each Term
+# COLS <- c("black","green")
+# heatmap.2( LME.ARR.terms, trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(5,10) )
+ # P-Values for each Term
+COLS.list <- c("firebrick1","chocolate1","gold1","springgreen2","steelblue2","slateblue3","black")
+COLS <- c( "firebrick1",colorRampPalette(COLS.list[3:7])(19) ) # colorRampPalette(COLS.list)(20)
+ROW.COLS <- rep("deepskyblue2",LME.N.terms) ; ROW.COLS[grep("DRUG",LME.terms)] <- "chartreuse2"
+png( paste(PathToPlot,"1-LME_ModBuild.png",sep="/"), height=1200,width=1600,pointsize=30 )
+heatmap.2( LME.ARR.terms.p, main="Inclusion/Significance of Terms in Models",xlab="Model",ylab="Term",trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(6,11),lhei=c(2,9),lwid=c(1,6),RowSideColors=ROW.COLS )
+dev.off()
+
+## Determine which models have DRUG interactions
+LME.drugint <- as.numeric(unlist( lapply( LME, function(x) any(grepl( "DRUG:|:DRUG", names(coef(x)) ))) ))
+
+
+
 ##############################################################
 ## PLOT SOME PREDICTED VALUES ################################
 ##############################################################
@@ -421,25 +522,35 @@ dev.off()
 pairs( data.frame( TAB$DAS, predict(LME.1b),predict(LME.11b),predict(LME.12b) ), col=COLS[factor(TAB$PLAC)], pch="." )
 
 ## A few specific Patients
+png( "Dropbox/Schork/JNJ11/Slides/20150416_PA_Visit/MEM_Ex_2.png",height=1000,width=1400,pointsize=30 )
 COLS.list <- c("firebrick3","chocolate2","gold2","springgreen2","steelblue2","slateblue3")
 N.patients <- 4
 First.patient <- sample(1:436,1) # 3
 COLS <- colorRampPalette(sample(COLS.list))(N.patients)
-plot( 0,0,type="n", xlim=c(0,100),ylim=c(0,10),xlab="Weeks",ylab="DAS", main="Predicted vs Actual DAS Over Time" )
+plot( 0,0,type="n", xlim=c(0,100),ylim=c(1,9),xlab="Weeks",ylab="DAS", main="Predicted vs Actual DAS Over Time" )
 abline( h=seq(0,10,1), lty=2,col="grey50",lwd=1 )
 for ( n in 1:N.patients ) {
 	samp <- unique(TAB$IID)[First.patient+n-1]
 	ind <- which(TAB$IID==samp)
 	PCHS <- c(1,16)[factor(TAB$DRUG[ind])]
 	OBS <- TAB[ ind, "DAS" ]
-	EXP.LME.1 <- predict(LME.1b)[ind]
-	EXP.LME.12 <- predict(LME.12b)[ind]
-	points( TAB[ind,"WK"], OBS, col=COLS[n], type="o",pch=PCHS,lty=1,lwd=2 )
-	points( TAB[ind,"WK"], EXP.LME.1, col=COLS[n], type="o",pch=PCHS,lty=2,lwd=2 )
-	points( TAB[ind,"WK"], EXP.LME.12, col=COLS[n], type="o",pch=PCHS,lty=3,lwd=2 )
+	EXP.LME.1 <- predict(LME$LME.1b)[ind]
+	EXP.LME.12 <- predict(LME$LME.12b)[ind]
+	points( TAB[ind,"WK"], OBS, col=COLS[n], type="o",pch=PCHS,lty=2,lwd=1 )
+	points( TAB[ind,"WK"], EXP.LME.1, col=COLS[n], type="o",pch=PCHS,lty=1,lwd=2 )
+	# points( TAB[ind,"WK"], EXP.LME.12, col=COLS[n], type="o",pch=PCHS,lty=3,lwd=2 )
 }
+dev.off()
 coef(LME.12b)[ First.patient:(First.patient+N.patients-1) , ]
 
+png( "Dropbox/Schork/JNJ11/Slides/20150416_PA_Visit/MEM_Ex_2_hist2.png",height=1400,width=1400,pointsize=30 )
+par(mfrow=c(2,2))
+hist( coef(LME$LME.1b)[,1], main="Distribution of Intercept Terms",xlab="Beta(0)",ylab="# Patients",col="dodgerblue1" )
+plot(0,0,type="n",xlab="",ylab="",xaxt="n",yaxt="n",xlim=c(-1,1),ylim=c(-1,1) )
+text( 0,0, round( cor( coef(LME$LME.1b)[,1],coef(LME$LME.1b)[,2] ) ,3), col="purple2",cex=3 )
+plot( coef(LME$LME.1b)[,1],coef(LME$LME.1b)[,2], main="Correlation b/n Random Effects Estimates",xlab="Beta(0)",ylab="Beta(dr)",col="purple2" )
+hist( coef(LME$LME.1b)[,2], main="Distribution of Drug Terms",xlab="Beta(dr)",ylab="# Patients",col="firebrick1" )
+dev.off()
 ##############################################################
 ## LIST OF LINEAR MODELS #####################################
 ##############################################################
@@ -459,13 +570,38 @@ summary(LME.2)
 
 
 
+##############################################################
+## INCORPORATE VARIANTS ######################################
+##############################################################
 
+## Pull out Candidate SNPs
+THRSH <- 1e-6
+CAND.which <- which( COMP$P_Assoc < 1e-6 )
+CAND.id <- paste( COMP$SNP[CAND.which], COMP$Allele[CAND.which], sep="_" )
 
+CAND.rawcols <- which( colnames(RAW) %in% CAND.id )
+RAW.cand <- RAW[,c(1,CAND.rawcols)]
+CAND.colnames <- colnames(RAW.cand)[2:ncol(RAW.cand)]
 
+## Merge Candidate SNPs w/ Clinical Variables
+MG <- merge( x=TAB, y=RAW.cand, by="FID" )
 
+## Test Model that includes each Variant Individually
+LM.VAR <- list()
+for ( c in 1:length(CAND.colnames) ) {
+# for ( c in 1:5 ) {
+	cand <- CAND.colnames[c]
+	TEMP_DAT <- MG[,c("IID","DAS","DRUG",cand)]
+	colnames(TEMP_DAT)[4] <- "cand"
+	LM.VAR[[cand]] <- lme( DAS ~ DRUG*cand, random= ~ DRUG | IID, data=TEMP_DAT )
+}
 
+## Pull out p-value for Variants
+LM.VAR.p.var <- unlist(lapply( LM.VAR, function(x) summary(x)$tTable["cand","p-value"] ))
+LM.VAR.p.int <- unlist(lapply( LM.VAR, function(x) summary(x)$tTable["DRUG:cand","p-value"] ))
 
-
+plot( -log10(LM.VAR.p.var), col="dodgerblue2",pch="+", ylim=c(0,9) )
+points( -log10(LM.VAR.p.int), col="chartreuse2",pch="+" )
 
 
 ##############################################################
