@@ -10,7 +10,7 @@ library(nlme)
 ##############################################################
 
 ## Set Date
-DATE <- "20150413"
+DATE <- "20150416"
 
 # ## TSCC Paths
 # PathToData <- "/projects/janssen/clinical/"
@@ -386,7 +386,6 @@ summary(LME$LME.14d)
 ## Decide: w/ or w/o RF_ACPA:DRUG interaction??
 cor(data.frame( TAB$DAS, predict(LME$LME.14c), predict(LME$LME.14d) ))
 sd(resid(LME$LME.14c)) ; sd(resid(LME$LME.14d)) ; sd(resid(LME$LME.12b))
- # !!! Include RF_ACPA, but not RF_ACPA:DRUG !!!
 
 ## Use 12b, add DIS_DUR interactions
 LME$LME.15 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
@@ -406,7 +405,6 @@ summary(LME$LME.15d)
 ## Decide: w/ or w/o RF_ACPA:DRUG interaction??
 cor(data.frame( TAB$DAS, predict(LME$LME.15b), predict(LME$LME.15c), predict(LME$LME.15d) ))
 sd(resid(LME$LME.15b)) ; sd(resid(LME$LME.15c)) ; sd(resid(LME$LME.15d)) ; sd(resid(LME$LME.12b))
- # !!! Include ... !!!
 
 ## Use 12b, add BMI interactions
 LME$LME.16 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*BMI, random = ~ DRUG+WK | IID, data=TAB )
@@ -426,17 +424,135 @@ summary(LME$LME.16d)
 ## Decide: w/ or w/o RF_ACPA:DRUG interaction??
 cor(data.frame( TAB$DAS, predict(LME$LME.16b), predict(LME$LME.16c), predict(LME$LME.16d) ))
 sd(resid(LME$LME.16b)) ; sd(resid(LME$LME.16c)) ; sd(resid(LME$LME.16d)) ; sd(resid(LME$LME.12b))
- # !!! Include ... !!!
+
+## Use 12b, add AGE interactions
+LME$LME.17 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*AGE, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.17)
+## Remove AGE:DRUG:WK
+LME$LME.17a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*AGE-DRUG:AGE:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.17a)
+## Remove AGE:WK
+LME$LME.17b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*AGE-DRUG:AGE:WK-AGE:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.17b)
+## Remove AGE:PLAC
+LME$LME.17c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*AGE, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.17c)
+## Remove AGE:DRUG
+LME$LME.17d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+AGE, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.17d)
+## Decide: w/ or w/o RF_ACPA:DRUG interaction??
+cor(data.frame( TAB$DAS, predict(LME$LME.17b), predict(LME$LME.17c), predict(LME$LME.17d) ))
+sd(resid(LME$LME.17b)) ; sd(resid(LME$LME.17c)) ; sd(resid(LME$LME.17d)) ; sd(resid(LME$LME.12b))
+
+## Use 12b, add RF interactions
+LME$LME.18 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.18)
+## Remove RF:DRUG:WK
+LME$LME.18a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF-DRUG:RF:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.18a)
+## Remove RF:WK
+LME$LME.18b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF-DRUG:RF:WK-RF:WK, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.18b)
+## Remove RF:PLAC
+LME$LME.18c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.18c)
+## Remove RF:DRUG
+LME$LME.18d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+RF, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.18d)
+## Decide: w/ or w/o RF_ACPA:DRUG interaction??
+cor(data.frame( TAB$DAS, predict(LME$LME.18b), predict(LME$LME.18c), predict(LME$LME.18d) ))
+sd(resid(LME$LME.18b)) ; sd(resid(LME$LME.18c)) ; sd(resid(LME$LME.18d)) ; sd(resid(LME$LME.12b))
+
+## Use 12b, add ACPA interactions
+LME$LME.19 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*ACPA, random = ~ DRUG+WK | IID, data=TAB, subset=ACPA!="" )
+summary(LME$LME.19)
+## Remove ACPA:DRUG:WK
+LME$LME.19a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*ACPA-DRUG:ACPA:WK, random = ~ DRUG+WK | IID, data=TAB, subset=ACPA!="" )
+summary(LME$LME.19a)
+## Remove ACPA:WK
+LME$LME.19b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*ACPA-DRUG:ACPA:WK-ACPA:WK, random = ~ DRUG+WK | IID, data=TAB, subset=ACPA!="" )
+summary(LME$LME.19b)
+## Remove ACPA:PLAC
+LME$LME.19c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*ACPA, random = ~ DRUG+WK | IID, data=TAB, subset=ACPA!="" )
+summary(LME$LME.19c)
+## Remove ACPA:DRUG
+LME$LME.19d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+ACPA, random = ~ DRUG+WK | IID, data=TAB, subset=ACPA!="" )
+summary(LME$LME.19d)
+## Decide: w/ or w/o ACPA_ACPA:DRUG interaction??
+cor(data.frame( TAB$DAS, predict(LME$LME.19b), predict(LME$LME.19c), predict(LME$LME.19d) ))
+sd(resid(LME$LME.19b)) ; sd(resid(LME$LME.19c)) ; sd(resid(LME$LME.19d)) ; sd(resid(LME$LME.12b))
+
+###### SO FAR, 14c & 14d are only models with ALL significant terms ######
+############## Use 14c (includes RF_ACPA*DRUG) and go from here ##########
+
+## Use 14c, add DIS_DUR*DRUG interactions
+LME$LME.20 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+DRUG*DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.20)
+## Remove RF_ACPA:PLAC
+LME$LME.20a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.20a)
+## Decide: w/ or w/o ACPA_ACPA:DRUG interaction??
+cor(data.frame( TAB$DAS, predict(LME$LME.12b), predict(LME$LME.14c), predict(LME$LME.14d), predict(LME$LME.20), predict(LME$LME.20a) ))
+sd(resid(LME$LME.12b)); sd(resid(LME$LME.14c)) ; sd(resid(LME$LME.14d)) ; sd(resid(LME$LME.20)) ; sd(resid(LME$LME.20a))
+
+## Use 14c, add AGE*DRUG interactions
+LME$LME.21 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+DRUG*AGE, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.21)
+## Remove RF_ACPA:PLAC
+LME$LME.21a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+AGE, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.21a)
+## Decide: w/ or w/o ACPA_ACPA:DRUG interaction??
+cor(data.frame( TAB$DAS, predict(LME$LME.12b), predict(LME$LME.14c), predict(LME$LME.14d), predict(LME$LME.21), predict(LME$LME.21a) ))
+sd(resid(LME$LME.12b)); sd(resid(LME$LME.14c)) ; sd(resid(LME$LME.14d)) ; sd(resid(LME$LME.21)) ; sd(resid(LME$LME.21a))
+
+## Use 14c, add BMI*DRUG interactions
+LME$LME.22 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+DRUG*BMI, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.22)
+## Remove RF_ACPA:PLAC
+LME$LME.22a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+BMI, random = ~ DRUG+WK | IID, data=TAB )
+summary(LME$LME.22a)
+## Decide: w/ or w/o ACPA_ACPA:DRUG interaction??
+cor(data.frame( TAB$DAS, predict(LME$LME.12b), predict(LME$LME.14c), predict(LME$LME.14d), predict(LME$LME.22), predict(LME$LME.22a) ))
+sd(resid(LME$LME.12b)); sd(resid(LME$LME.14c)) ; sd(resid(LME$LME.14d)) ; sd(resid(LME$LME.22)) ; sd(resid(LME$LME.22a))
+
+###### SO FAR, 14c & 14d are only models with ALL significant terms ######
+############## Use 14c (includes RF_ACPA*DRUG) and go from here ##########
+## PROBLEM: Trajectory during Placebo may not match Trajectory during Treatment
+
+## Use 14c, include DRUG*WK interactions in Random Effects
+# LME$LME.23 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, random = ~ DRUG*WK | IID, data=TAB )
+# summary(LME$LME.23) # Did not Converge, Try Simpler Fixed Effects
+## Get Rid of RF_ACPA, just keep WK, DRUG, PLAC
+# LME$LME.23a <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG*WK | IID, data=TAB )
+# summary(LME$LME.23a) # Did not Converge!!!!
+## Try including PLAC*WK interaction as well, instead of DRUG*WK in Random Effects
+# LME$LME.23b <- lme( fixed = DAS ~ DRUG*WK+PLAC*WK, random = ~ DRUG+WK | IID, data=TAB )
+# summary(LME$LME.23b) # Did not Converge!!!!
+## Try including PLAC*WK interaction as well, instead of DRUG*WK in Random Effects
+# LME$LME.23b <- lme( fixed = DAS ~ WK*factor(TRT), random = ~ 1 | IID, data=TAB )
+# summary(LME$LME.23b) # Did not Converge!!!!
+
+
+
+
 
 head(coef(LME$LME.12b))
-head(coef(LME$LME.14b))
+head(coef(LME$LME.14c))
+head(coef(LME$LME.20))
 
-################################################
-## Compile Info about all Models
+##############################################################
+## COMPILE INFO ABOUT MODELS #################################
+##############################################################
 
 ## Specify Number and Names of Models
 LME.N.models <- length(LME)
 LME.Names.models <- names(LME)
+
+## Determine which models have DRUG interactions
+LME.drugint <- as.numeric(unlist( lapply( LME, function(x) any(grepl( "DRUG:|:DRUG", names(coef(x)) ))) ))
+
+################################################
+## Compile Terms and Significance for each model
 
 ## Get all Terms used in any model
 LME.terms <- Reduce( union, lapply( LME, function(x) colnames(coef(x)) ) )
@@ -457,10 +573,7 @@ for ( m in 1:length(LME) ) {
 	which.in.2 <- which( LME.terms %in% which.terms.2 )
 	LME.ARR.terms.p[which.in.2,mod] <- summary(LME[[mod]])$tTable[which.terms.2,"p-value"]
 }
- # Presence of each Term
-# COLS <- c("black","green")
-# heatmap.2( LME.ARR.terms, trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(5,10) )
- # P-Values for each Term
+ # Plot P-Values for each Term
 COLS.list <- c("firebrick1","chocolate1","gold1","springgreen2","steelblue2","slateblue3","black")
 COLS <- c( "firebrick1",colorRampPalette(COLS.list[3:7])(19) ) # colorRampPalette(COLS.list)(20)
 ROW.COLS <- rep("deepskyblue2",LME.N.terms) ; ROW.COLS[grep("DRUG",LME.terms)] <- "chartreuse2"
@@ -468,14 +581,90 @@ png( paste(PathToPlot,"1-LME_ModBuild.png",sep="/"), height=1200,width=1600,poin
 heatmap.2( LME.ARR.terms.p, main="Inclusion/Significance of Terms in Models",xlab="Model",ylab="Term",trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(6,11),lhei=c(2,9),lwid=c(1,6),RowSideColors=ROW.COLS )
 dev.off()
 
-## Determine which models have DRUG interactions
-LME.drugint <- as.numeric(unlist( lapply( LME, function(x) any(grepl( "DRUG:|:DRUG", names(coef(x)) ))) ))
+################################################
+## Compile Fit Stats for each Model
+ # AIC/BIC/logLik
+LME.BIC <- unlist(lapply( LME, BIC ))
+LME.AIC <- unlist(lapply( LME, AIC ))
+LME.LL <- unlist(lapply( LME, logLik ))
+ # Residual Vairance
+LME.RES <- unlist(lapply( LME, function(x) sd(resid(x)) ))
 
+## Plot Stats
+COLS <- c("cadetblue2","tomato2","mediumpurple3","seagreen2")
+png( paste(PathToPlot,"1-LME_ModBuild_Assess.png",sep="/"), height=1000,width=2000,pointsize=30 )
+par( mfrow=c(1,3) )
+ # LL
+plot( 1:LME.N.models, LME.LL, col=COLS[1], main="Model Assessment: LogLik",ylab="LogLik",xlab="Model", pch=20,type="o" )
+abline( v=which.max(LME.LL), col="firebrick1", lty=2 )
+text( which.max(LME.LL)-1,quantile(range(LME.LL),.8), label=names(LME.LL)[which.max(LME.LL)],srt=90,col="firebrick1")
+ # IC
+plot( 1:LME.N.models, LME.AIC, col=COLS[2], main="Model Assessment: Info Criteria",ylab="AIC & BIC",xlab="Model", pch=20,type="o" )
+points( 1:LME.N.models, LME.BIC, col=COLS[3], pch=20,type="o" )
+abline( v=which.min(LME.AIC), col="firebrick1", lty=2 )
+abline( v=which.min(LME.BIC), col="firebrick1", lty=2 )
+legend( "topright", col=COLS[2:3],legend=c("AIC","BIC"), pch=20,lwd=1 )
+text( which.min(LME.BIC)-1,quantile(range(LME.BIC),.2), label=names(LME.BIC)[which.min(LME.BIC)],srt=90,col="firebrick1")
+ # RES
+plot( 1:LME.N.models, LME.RES, col=COLS[4], main="Model Assessment: sd(Residuals)",ylab="sd(Residuals)",xlab="Model", pch=20,type="o" )
+abline( v=which.min(LME.RES), col="firebrick1", lty=2 )
+text( which.min(LME.RES)-1,quantile(range(LME.RES),.2), label=names(LME.RES)[which.min(LME.RES)],srt=90,col="firebrick1")
+dev.off()
+## More Refined Models
+WHICH_MODS <- which(apply( LME.ARR.terms, 2, function(x) any(grep( "WK", rownames( LME.ARR.terms )[which(x==1)] )) ))
+COLS <- c("cadetblue2","tomato2","mediumpurple3","seagreen2")
+png( paste(PathToPlot,"1-LME_ModBuild_AssessWK.png",sep="/"), height=1000,width=2000,pointsize=30 )
+par( mfrow=c(1,3) )
+ # LL
+plot( WHICH_MODS, LME.LL[WHICH_MODS], col=COLS[1], main="Model Assessment: LogLik",ylab="LogLik",xlab="Model", pch=20,type="o" )
+abline( v=which.max(LME.LL), col="firebrick1", lty=2 )
+text( which.max(LME.LL)-1,quantile(range(LME.LL),.8), label=names(LME.LL)[which.max(LME.LL)],srt=90,col="firebrick1")
+ # IC
+plot( WHICH_MODS, LME.AIC[WHICH_MODS], col=COLS[2], main="Model Assessment: Info Criteria",ylab="AIC & BIC",xlab="Model", pch=20,type="o" )
+points( WHICH_MODS, LME.BIC[WHICH_MODS], col=COLS[3], pch=20,type="o" )
+abline( v=which.min(LME.AIC), col="firebrick1", lty=2 )
+abline( v=which.min(LME.BIC), col="firebrick1", lty=2 )
+legend( "topright", col=COLS[2:3],legend=c("AIC","BIC"), pch=20,lwd=1 )
+text( which.min(LME.BIC)-1,quantile(range(LME.BIC),.2), label=names(LME.BIC)[which.min(LME.BIC)],srt=90,col="firebrick1")
+ # RES
+plot( WHICH_MODS, LME.RES[WHICH_MODS], col=COLS[4], main="Model Assessment: sd(Residuals)",ylab="sd(Residuals)",xlab="Model", pch=20,type="o" )
+abline( v=which.min(LME.RES), col="firebrick1", lty=2 )
+text( which.min(LME.RES)-1,quantile(range(LME.RES),.2), label=names(LME.RES)[which.min(LME.RES)],srt=90,col="firebrick1")
+dev.off()
+
+pairs( data.frame( LME.LL, LME.BIC, LME.AIC, LME.RES ) )
 
 
 ##############################################################
 ## PLOT SOME PREDICTED VALUES ################################
 ##############################################################
+
+## A few random Patients
+png( paste(PathToPlot,"1-LME_Mod_Pred.png",sep="/"), height=1000,width=1400,pointsize=30 )
+COLS.list <- c("firebrick3","chocolate2","gold2","springgreen2","steelblue2","slateblue3")
+N.patients <- 4
+First.patient <- sample(1:436,1)
+COLS <- colorRampPalette(sample(COLS.list))(N.patients)
+COLS <- c("#6959CD", "#A75268", "#9ED527", "#EE7621")
+plot( 0,0,type="n", xlim=c(0,100),ylim=c(1,9),xlab="Weeks",ylab="DAS", main="Predicted vs Actual DAS Over Time" )
+abline( h=seq(0,10,1), lty=2,col="grey50",lwd=1 )
+for ( n in 1:N.patients ) {
+	samp <- unique(TAB$IID)[First.patient+n-1]
+	ind <- which(TAB$IID==samp)
+	PCHS <- c(1,16)[factor(TAB$DRUG[ind])]
+	SWITCH <- TAB$WK[ind][which(TAB$DRUG[ind]==1)][1]
+	OBS <- TAB[ ind, "DAS" ]
+	EXP.LME.1 <- predict(LME$LME.1b)[ind]
+	EXP.LME.12 <- predict(LME$LME.12b)[ind]
+	EXP.LME.14 <- predict(LME$LME.14c)[ind]
+	points( TAB[ind,"WK"], OBS, col=COLS[n], type="o",pch=PCHS,lty=3,lwd=2 )
+	points( TAB[ind,"WK"], EXP.LME.1, col=COLS[n], type="l",pch=PCHS,lty=1,lwd=3 )
+	points( TAB[ind,"WK"], EXP.LME.14, col=COLS[n], type="l",pch=PCHS,lty=2,lwd=3 )
+	abline( v=jitter(SWITCH,amount=.5), col=COLS[n],lty=2,lwd=1 )
+	# points( TAB[ind,"WK"], EXP.LME.12, col=COLS[n], type="o",pch=PCHS,lty=3,lwd=2 )
+}
+dev.off()
+coef(LME.12b)[ First.patient:(First.patient+N.patients-1) , ]
 
 ## Histogram of Coefficients (random Effects)
 COLS.list <- c("firebrick3","chocolate2","gold2","springgreen2","steelblue2","slateblue3")
@@ -520,28 +709,6 @@ dev.off()
 
 ## All Data Points
 pairs( data.frame( TAB$DAS, predict(LME.1b),predict(LME.11b),predict(LME.12b) ), col=COLS[factor(TAB$PLAC)], pch="." )
-
-## A few specific Patients
-png( "Dropbox/Schork/JNJ11/Slides/20150416_PA_Visit/MEM_Ex_2.png",height=1000,width=1400,pointsize=30 )
-COLS.list <- c("firebrick3","chocolate2","gold2","springgreen2","steelblue2","slateblue3")
-N.patients <- 4
-First.patient <- sample(1:436,1) # 3
-COLS <- colorRampPalette(sample(COLS.list))(N.patients)
-plot( 0,0,type="n", xlim=c(0,100),ylim=c(1,9),xlab="Weeks",ylab="DAS", main="Predicted vs Actual DAS Over Time" )
-abline( h=seq(0,10,1), lty=2,col="grey50",lwd=1 )
-for ( n in 1:N.patients ) {
-	samp <- unique(TAB$IID)[First.patient+n-1]
-	ind <- which(TAB$IID==samp)
-	PCHS <- c(1,16)[factor(TAB$DRUG[ind])]
-	OBS <- TAB[ ind, "DAS" ]
-	EXP.LME.1 <- predict(LME$LME.1b)[ind]
-	EXP.LME.12 <- predict(LME$LME.12b)[ind]
-	points( TAB[ind,"WK"], OBS, col=COLS[n], type="o",pch=PCHS,lty=2,lwd=1 )
-	points( TAB[ind,"WK"], EXP.LME.1, col=COLS[n], type="o",pch=PCHS,lty=1,lwd=2 )
-	# points( TAB[ind,"WK"], EXP.LME.12, col=COLS[n], type="o",pch=PCHS,lty=3,lwd=2 )
-}
-dev.off()
-coef(LME.12b)[ First.patient:(First.patient+N.patients-1) , ]
 
 png( "Dropbox/Schork/JNJ11/Slides/20150416_PA_Visit/MEM_Ex_2_hist2.png",height=1400,width=1400,pointsize=30 )
 par(mfrow=c(2,2))
