@@ -10,7 +10,7 @@ library(nlme)
 ##############################################################
 
 ## Set Date
-DATE <- "20150416"
+DATE <- "20150424"
 
 # ## TSCC Paths
 # PathToData <- "/projects/janssen/clinical/"
@@ -29,202 +29,6 @@ WKS <- unique( TAB$WK )
 ## Load Candidate Genotype Files
 COMP <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/CND_LT8_DEL_MNe_MN_DAS_BL_MN_PC1_PC2.compile.short", sep="\t",header=T)
 RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw", sep="",header=T)
-
-##############################################################
-## LINEAR MODELS #############################################
-##############################################################
-LM <- list()
-
-## Basic Linear Model w/ only DRUG effect
-LM$LM.1 <- lm( DAS ~ DRUG, data=TAB )
-summary(LM$LM.1)
-
-## Add DRUG*SEX Interaction
-LM$LM.2 <- lm( DAS ~ DRUG*SEX, data=TAB )
-summary(LM$LM.2)
-## Change to DRUG+SEX
-LM$LM.2a <- lm( DAS ~ DRUG+SEX, data=TAB )
-summary(LM$LM.2a)
-
-## Remove SEX, add DRUG*AGE
-LM$LM.3 <- lm( DAS ~ DRUG*AGE, data=TAB )
-summary(LM$LM.3)
-## Change to DRUG+AGE
-LM$LM.3a <- lm( DAS ~ DRUG+AGE, data=TAB )
-summary(LM$LM.3a)
-
-## Remove SEX, add DRUG*DIS_DUR
-LM$LM.4 <- lm( DAS ~ DRUG*DIS_DUR, data=TAB )
-summary(LM$LM.4)
-## Change to DRUG+DIS_DUR
-LM$LM.4a <- lm( DAS ~ DRUG+DIS_DUR, data=TAB )
-summary(LM$LM.4a)
-
-## Remove DIS_DUR, add DRUG*HT
-LM$LM.5 <- lm( DAS ~ DRUG*HT, data=TAB )
-summary(LM$LM.5)
-## Change to DRUG+HT
-LM$LM.5a <- lm( DAS ~ DRUG+HT, data=TAB )
-summary(LM$LM.5a)
-
-## Change to DRUG*WT
-LM$LM.6 <- lm( DAS ~ DRUG*WT, data=TAB )
-summary(LM$LM.6)
-## Change to DRUG+WT
-LM$LM.6a <- lm( DAS ~ DRUG+WT, data=TAB )
-summary(LM$LM.6a)
-
-## Change to DRUG*BMI
-LM$LM.7 <- lm( DAS ~ DRUG*BMI, data=TAB )
-summary(LM$LM.7)
-## Change to DRUG+BMI
-LM$LM.7a <- lm( DAS ~ DRUG+BMI, data=TAB )
-summary(LM$LM.7a)
-
-## Change to DRUG*ACPA
-LM$LM.8 <- lm( DAS ~ DRUG*ACPA, data=TAB, subset=ACPA!="" )
-summary(LM$LM.8)
-## Change to DRUG+ACPA
-LM$LM.8a <- lm( DAS ~ DRUG+ACPA, data=TAB, subset=ACPA!="" )
-summary(LM$LM.8a)
-
-## Change to DRUG*RF
-LM$LM.9 <- lm( DAS ~ DRUG*RF, data=TAB )
-summary(LM$LM.9)
-## Change to DRUG+RF
-LM$LM.9a <- lm( DAS ~ DRUG+RF, data=TAB )
-summary(LM$LM.9a)
-
-## Change to DRUG*RF_ACPA
-LM$LM.10 <- lm( DAS ~ DRUG*RF_ACPA, data=TAB )
-summary(LM$LM.10)
-## Change to DRUG+RF_ACPA
-LM$LM.10a <- lm( DAS ~ DRUG+RF_ACPA, data=TAB )
-summary(LM$LM.10a)
-
-## Change to DRUG*WK
-LM$LM.11 <- lm( DAS ~ DRUG*WK, data=TAB )
-summary(LM$LM.11)
-## Change to DRUG+WK
-LM$LM.11a <- lm( DAS ~ DRUG+WK, data=TAB )
-summary(LM$LM.11a)
-
-## Include PLAC (all 2-way interactions)
-LM$LM.12 <- lm( DAS ~ (DRUG+WK+PLAC)^2, data=TAB )
-summary(LM$LM.12)
-## Include PLAC (2-way interactions w/o PLAC:DRUG)
-LM$LM.12a <- lm( DAS ~ DRUG*WK+PLAC+PLAC:WK, data=TAB )
-summary(LM$LM.12a)
-## Include PLAC (w/o PLAC interactions)
-LM$LM.12b <- lm( DAS ~ DRUG*WK+PLAC, data=TAB )
-summary(LM$LM.12b)
-
-## Use 12b, add SEX interactions
-LM$LM.13 <- lm( DAS ~ (DRUG*WK+PLAC)*SEX, data=TAB )
-summary(LM$LM.13)
-## Remove SEX:DRUG:WK
-LM$LM.13a <- lm( DAS ~ (DRUG*WK+PLAC)*SEX-DRUG:SEX:WK, data=TAB )
-summary(LM$LM.13a)
-## Remove SEX:WK
-LM$LM.13b <- lm( DAS ~ (DRUG*WK+PLAC)*SEX-DRUG:SEX:WK-SEX:WK, data=TAB )
-summary(LM$LM.13b)
-## Remove SEX:PLAC
-LM$LM.13c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*SEX, data=TAB )
-summary(LM$LM.13c)
-## Remove SEX:DRUG
-LM$LM.13d <- lm( DAS ~ (DRUG*WK+PLAC)+SEX, data=TAB )
-summary(LM$LM.13d)
-
-## Use 12b, add RF_ACPA interactions
-LM$LM.14 <- lm( DAS ~ (DRUG*WK+PLAC)*RF_ACPA, data=TAB )
-summary(LM$LM.14)
-## Remove RF_ACPA:DRUG:WK
-LM$LM.14a <- lm( DAS ~ (DRUG*WK+PLAC)*RF_ACPA-DRUG:RF_ACPA:WK, data=TAB )
-summary(LM$LM.14a)
-## Remove RF_ACPA:WK
-LM$LM.14b <- lm( DAS ~ (DRUG*WK+PLAC)*RF_ACPA-DRUG:RF_ACPA:WK-RF_ACPA:WK, data=TAB )
-summary(LM$LM.14b)
-## Remove RF_ACPA:PLAC
-LM$LM.14c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, data=TAB )
-summary(LM$LM.14c)
-## Remove RF_ACPA:DRUG
-LM$LM.14d <- lm( DAS ~ (DRUG*WK+PLAC)+RF_ACPA, data=TAB )
-summary(LM$LM.14d)
-
-## Use 12b, add DIS_DUR interactions
-LM$LM.15 <- lm( DAS ~ (DRUG*WK+PLAC)*DIS_DUR, data=TAB )
-summary(LM$LM.15)
-## Remove DIS_DUR:DRUG:WK
-LM$LM.15a <- lm( DAS ~ (DRUG*WK+PLAC)*DIS_DUR-DRUG:DIS_DUR:WK, data=TAB )
-summary(LM$LM.15a)
-## Remove DIS_DUR:WK
-LM$LM.15b <- lm( DAS ~ (DRUG*WK+PLAC)*DIS_DUR-DRUG:DIS_DUR:WK-DIS_DUR:WK, data=TAB )
-summary(LM$LM.15b)
-## Remove DIS_DUR:PLAC
-LM$LM.15c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*DIS_DUR, data=TAB )
-summary(LM$LM.15c)
-## Remove DIS_DUR:DRUG
-LM$LM.15d <- lm( DAS ~ (DRUG*WK+PLAC)+DIS_DUR, data=TAB )
-summary(LM$LM.15d)
-
-## Use 12b, add BMI interactions
-LM$LM.16 <- lm( DAS ~ (DRUG*WK+PLAC)*BMI, data=TAB )
-summary(LM$LM.16)
-## Remove BMI:DRUG:WK
-LM$LM.16a <- lm( DAS ~ (DRUG*WK+PLAC)*BMI-DRUG:BMI:WK, data=TAB )
-summary(LM$LM.16a)
-## Remove BMI:WK
-LM$LM.16b <- lm( DAS ~ (DRUG*WK+PLAC)*BMI-DRUG:BMI:WK-BMI:WK, data=TAB )
-summary(LM$LM.16b)
-## Remove BMI:PLAC
-LM$LM.16c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*BMI, data=TAB )
-summary(LM$LM.16c)
-## Remove BMI:DRUG
-LM$LM.16d <- lm( DAS ~ (DRUG*WK+PLAC)+BMI, data=TAB )
-summary(LM$LM.16d)
-
-
-################################################
-## Compile Info about all Models
-
-## Specify Number and Names of Models
-LM.N.models <- length(LM)
-LM.Names.models <- names(LM)
-
-## Get all Terms used in any model
-LM.terms <- Reduce( union, lapply( LM, function(x) names(coef(x)) ) )
-# LM.terms <- sort( LM.terms )
-LM.N.terms <- length(LM.terms)
-
-## Determine which Terms are in each model
-LM.ARR.terms <- array( 0, c(LM.N.terms,LM.N.models) )
-LM.ARR.terms.p <- array( 1, c(LM.N.terms,LM.N.models) )
-colnames(LM.ARR.terms) <- colnames(LM.ARR.terms.p) <- LM.Names.models
-rownames(LM.ARR.terms) <- rownames(LM.ARR.terms.p) <- LM.terms
-for ( m in 1:length(LM) ) {
-	mod <- names(LM)[m]
-	which.in <- which( LM.terms %in% names(coef(LM[[mod]])) )
-	which.terms <- LM.terms[which.in]
-	LM.ARR.terms[which.in,mod] <- 1
-	which.terms.2 <- which.terms[ which( which.terms %in% rownames(summary(LM[[mod]])$coefficients) ) ]
-	which.in.2 <- which( LM.terms %in% which.terms.2 )
-	LM.ARR.terms.p[which.in.2,mod] <- summary(LM[[mod]])$coefficients[which.terms.2,"Pr(>|t|)"]
-}
- # Presence of each Term
-# COLS <- c("black","green")
-# heatmap.2( LM.ARR.terms, trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(5,10) )
- # P-Values for each Term
-COLS.list <- c("firebrick1","chocolate1","gold1","springgreen2","steelblue2","slateblue3","black")
-COLS <- c( "firebrick1",colorRampPalette(COLS.list[3:7])(19) ) # colorRampPalette(COLS.list)(20)
-ROW.COLS <- rep("deepskyblue2",LM.N.terms) ; ROW.COLS[grep("DRUG",LM.terms)] <- "chartreuse2"
-png( paste(PathToPlot,"1-LM_ModBuild.png",sep="/"), height=1200,width=1600,pointsize=30 )
-# heatmap.2( LM.ARR.terms.p, trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(5,10),RowSideColors=ROW.COLS )
-heatmap.2( LM.ARR.terms.p, main="Inclusion/Significance of Terms in Models",xlab="Model",ylab="Term",trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(6,11),lhei=c(2,9),lwid=c(1,6),RowSideColors=ROW.COLS )
-dev.off()
-
-## Determine which models have DRUG interactions
-LM.drugint <- as.numeric(unlist( lapply( LM, function(x) any(grepl( "DRUG:|:DRUG", names(coef(x)) ))) ))
-
 
 ##############################################################
 ## LMM MODELS ################################################
@@ -658,22 +462,23 @@ for ( n in 1:N.patients ) {
 	EXP.LME.12 <- predict(LME$LME.12b)[ind]
 	EXP.LME.14 <- predict(LME$LME.14c)[ind]
 	points( TAB[ind,"WK"], OBS, col=COLS[n], type="o",pch=PCHS,lty=3,lwd=2 )
-	points( TAB[ind,"WK"], EXP.LME.1, col=COLS[n], type="l",pch=PCHS,lty=1,lwd=3 )
-	points( TAB[ind,"WK"], EXP.LME.14, col=COLS[n], type="l",pch=PCHS,lty=2,lwd=3 )
+	points( TAB[ind,"WK"], EXP.LME.1, col=COLS[n], type="l",pch=PCHS,lty=2,lwd=3 )
+	points( TAB[ind,"WK"], EXP.LME.14, col=COLS[n], type="l",pch=PCHS,lty=1,lwd=3 )
 	abline( v=jitter(SWITCH,amount=.5), col=COLS[n],lty=2,lwd=1 )
 	# points( TAB[ind,"WK"], EXP.LME.12, col=COLS[n], type="o",pch=PCHS,lty=3,lwd=2 )
 }
 dev.off()
-coef(LME.12b)[ First.patient:(First.patient+N.patients-1) , ]
+coef(LME$LME.12b)[ First.patient:(First.patient+N.patients-1) , ]
 
 ## Histogram of Coefficients (random Effects)
 COLS.list <- c("firebrick3","chocolate2","gold2","springgreen2","steelblue2","slateblue3")
 COLS <- sample(COLS.list)
+COLS <- COLS.list[c(2,5,3,6)]
 par(mfrow=c(1,4))
-hist( coef(LME.12b)[,"(Intercept)"], col=COLS[1] )
-hist( coef(LME.12b)[,"DRUG"], col=COLS[2] )
-hist( coef(LME.12b)[,"WK"], col=COLS[3] )
-hist( coef(LME.12b)[,"WK"]+coef(LME.12b)[,"DRUG:WK"], col=COLS[4] )
+hist( coef(LME$LME.14)[,"(Intercept)"], col=COLS[1] )
+hist( coef(LME$LME.14)[,"DRUG"], col=COLS[2] )
+hist( coef(LME$LME.14)[,"WK"], col=COLS[3] )
+hist( coef(LME$LME.14)[,"WK"]+coef(LME$LME.14)[,"DRUG:WK"], col=COLS[4] )
 
 ## All Data Points
 COLS.list <- c("firebrick3","chocolate2","gold2","springgreen2","steelblue2","slateblue3")
@@ -718,6 +523,69 @@ text( 0,0, round( cor( coef(LME$LME.1b)[,1],coef(LME$LME.1b)[,2] ) ,3), col="pur
 plot( coef(LME$LME.1b)[,1],coef(LME$LME.1b)[,2], main="Correlation b/n Random Effects Estimates",xlab="Beta(0)",ylab="Beta(dr)",col="purple2" )
 hist( coef(LME$LME.1b)[,2], main="Distribution of Drug Terms",xlab="Beta(dr)",ylab="# Patients",col="firebrick1" )
 dev.off()
+
+##############################################################
+## INCORPORATE VARIANTS ######################################
+##############################################################
+
+############ I FORGOT WHAT I WAS DOING!!!!!!!!!! ############
+## CHANGING COLNAMES & STUFF SO I KNOW WHERE VARIANTS ARE ON THE PLOT #####
+
+## Pull out Candidate SNPs
+THRSH <- 1e-6
+CAND.which <- which( COMP$P_Assoc < 1e-5 )
+CAND.id <- COMP$SNP[CAND.which] # paste( COMP$SNP[CAND.which], COMP$Allele[CAND.which], sep="_" )
+CAND.loc <- paste( COMP$CHR[CAND.which], COMP$BP[CAND.which], sep="_" )
+
+RAW.colnames <- unlist(lapply(strsplit( colnames(RAW), "_" ), function(x) paste(x[-length(x)],collapse="_") ))
+RAW.colnames <- gsub(".",":",RAW.colnames,fixed=T )
+RAW.colnames.which.X <- which( substr(RAW.colnames,1,2) %in% paste("X",1:22,sep="") )
+RAW.colnames[RAW.colnames.which.X] <- gsub("X","",RAW.colnames[RAW.colnames.which.X],fixed=T )
+# RAW.colnames <- RAW.colnames[ which(RAW.colnames!="") ]
+
+CAND.rawcols <- which( RAW.colnames %in% CAND.id )
+RAW.cand <- RAW[,c(1,CAND.rawcols)]
+CAND.colnames <- colnames(RAW.cand)[2:ncol(RAW.cand)]
+
+## Merge Candidate SNPs w/ Clinical Variables
+MG <- merge( x=TAB, y=RAW.cand, by="FID" )
+
+## Test Model that includes each Variant Individually
+LME.VAR <- list()
+for ( c in 1:length(CAND.colnames) ) {
+# for ( c in 1:5 ) {
+	cand <- CAND.colnames[c]
+	TEMP_DAT <- MG[,c("IID","DAS","DRUG",cand)]
+	colnames(TEMP_DAT)[4] <- "cand"
+	LME.VAR[[cand]] <- lme( DAS ~ DRUG*cand, random= ~ DRUG | IID, data=TEMP_DAT )
+	if ( c%%10==0 ) { print(paste( "Done with",c,"of",length(CAND.colnames) )) }
+}
+
+## Pull out p-value for Variants
+GWAS.p <- COMP$P_Assoc[CAND.which] ; names(GWAS.p) <- paste( COMP$SNP[CAND.which], COMP$Allele[CAND.which], sep="_" )
+GWAS.p <- GWAS.p[ which(names(GWAS.p) %in% CAND.colnames) ]
+LME.VAR.p.var <- unlist(lapply( LME.VAR, function(x) summary(x)$tTable["cand","p-value"] ))
+LME.VAR.p.int <- unlist(lapply( LME.VAR, function(x) summary(x)$tTable["DRUG:cand","p-value"] ))
+
+## Plot P-Values for Variants vs Drug Response
+COLS <- c("dodgerblue2","chartreuse2","tomato2")
+plot( -log10(LME.VAR.p.var), main="Variant Effect in Mixed Model", col=COLS[1],pch="+", ylim=c(0,9),xaxt="n",xlab="Variant",ylab="-log10(p)",cex=1.5 )
+points( -log10(LME.VAR.p.int), col=COLS[2],pch="+",cex=1.5 )
+points( -log10(GWAS.p), col=COLS[3],pch="+",cex=1.5 )
+axis( 1, at=1:length(LME.VAR.p.var), label=names(LME.VAR.p.var),las=2,cex.axis=.8 )
+abline( h=seq(0,15,1),lty=2,col="grey50")
+abline( h=-log10(5e-8),lty=2,col="firebrick2")
+abline( h=-log10(.05),lty=2,col="firebrick2")
+legend( "topleft",legend=c("Disease Level","Drug Response","GWAS"),col=COLS,pch="+",pt.cex=1.5)
+
+## Plot GWAS results vs 
+
+
+##############################################################
+## END OF DOC ################################################
+##############################################################
+
+
 ##############################################################
 ## LIST OF LINEAR MODELS #####################################
 ##############################################################
@@ -736,41 +604,198 @@ summary(LME.2)
 
 
 
-
 ##############################################################
-## INCORPORATE VARIANTS ######################################
+## LINEAR MODELS #############################################
 ##############################################################
+LM <- list()
 
-## Pull out Candidate SNPs
-THRSH <- 1e-6
-CAND.which <- which( COMP$P_Assoc < 1e-6 )
-CAND.id <- paste( COMP$SNP[CAND.which], COMP$Allele[CAND.which], sep="_" )
+## Basic Linear Model w/ only DRUG effect
+LM$LM.1 <- lm( DAS ~ DRUG, data=TAB )
+summary(LM$LM.1)
 
-CAND.rawcols <- which( colnames(RAW) %in% CAND.id )
-RAW.cand <- RAW[,c(1,CAND.rawcols)]
-CAND.colnames <- colnames(RAW.cand)[2:ncol(RAW.cand)]
+## Add DRUG*SEX Interaction
+LM$LM.2 <- lm( DAS ~ DRUG*SEX, data=TAB )
+summary(LM$LM.2)
+## Change to DRUG+SEX
+LM$LM.2a <- lm( DAS ~ DRUG+SEX, data=TAB )
+summary(LM$LM.2a)
 
-## Merge Candidate SNPs w/ Clinical Variables
-MG <- merge( x=TAB, y=RAW.cand, by="FID" )
+## Remove SEX, add DRUG*AGE
+LM$LM.3 <- lm( DAS ~ DRUG*AGE, data=TAB )
+summary(LM$LM.3)
+## Change to DRUG+AGE
+LM$LM.3a <- lm( DAS ~ DRUG+AGE, data=TAB )
+summary(LM$LM.3a)
 
-## Test Model that includes each Variant Individually
-LM.VAR <- list()
-for ( c in 1:length(CAND.colnames) ) {
-# for ( c in 1:5 ) {
-	cand <- CAND.colnames[c]
-	TEMP_DAT <- MG[,c("IID","DAS","DRUG",cand)]
-	colnames(TEMP_DAT)[4] <- "cand"
-	LM.VAR[[cand]] <- lme( DAS ~ DRUG*cand, random= ~ DRUG | IID, data=TEMP_DAT )
+## Remove SEX, add DRUG*DIS_DUR
+LM$LM.4 <- lm( DAS ~ DRUG*DIS_DUR, data=TAB )
+summary(LM$LM.4)
+## Change to DRUG+DIS_DUR
+LM$LM.4a <- lm( DAS ~ DRUG+DIS_DUR, data=TAB )
+summary(LM$LM.4a)
+
+## Remove DIS_DUR, add DRUG*HT
+LM$LM.5 <- lm( DAS ~ DRUG*HT, data=TAB )
+summary(LM$LM.5)
+## Change to DRUG+HT
+LM$LM.5a <- lm( DAS ~ DRUG+HT, data=TAB )
+summary(LM$LM.5a)
+
+## Change to DRUG*WT
+LM$LM.6 <- lm( DAS ~ DRUG*WT, data=TAB )
+summary(LM$LM.6)
+## Change to DRUG+WT
+LM$LM.6a <- lm( DAS ~ DRUG+WT, data=TAB )
+summary(LM$LM.6a)
+
+## Change to DRUG*BMI
+LM$LM.7 <- lm( DAS ~ DRUG*BMI, data=TAB )
+summary(LM$LM.7)
+## Change to DRUG+BMI
+LM$LM.7a <- lm( DAS ~ DRUG+BMI, data=TAB )
+summary(LM$LM.7a)
+
+## Change to DRUG*ACPA
+LM$LM.8 <- lm( DAS ~ DRUG*ACPA, data=TAB, subset=ACPA!="" )
+summary(LM$LM.8)
+## Change to DRUG+ACPA
+LM$LM.8a <- lm( DAS ~ DRUG+ACPA, data=TAB, subset=ACPA!="" )
+summary(LM$LM.8a)
+
+## Change to DRUG*RF
+LM$LM.9 <- lm( DAS ~ DRUG*RF, data=TAB )
+summary(LM$LM.9)
+## Change to DRUG+RF
+LM$LM.9a <- lm( DAS ~ DRUG+RF, data=TAB )
+summary(LM$LM.9a)
+
+## Change to DRUG*RF_ACPA
+LM$LM.10 <- lm( DAS ~ DRUG*RF_ACPA, data=TAB )
+summary(LM$LM.10)
+## Change to DRUG+RF_ACPA
+LM$LM.10a <- lm( DAS ~ DRUG+RF_ACPA, data=TAB )
+summary(LM$LM.10a)
+
+## Change to DRUG*WK
+LM$LM.11 <- lm( DAS ~ DRUG*WK, data=TAB )
+summary(LM$LM.11)
+## Change to DRUG+WK
+LM$LM.11a <- lm( DAS ~ DRUG+WK, data=TAB )
+summary(LM$LM.11a)
+
+## Include PLAC (all 2-way interactions)
+LM$LM.12 <- lm( DAS ~ (DRUG+WK+PLAC)^2, data=TAB )
+summary(LM$LM.12)
+## Include PLAC (2-way interactions w/o PLAC:DRUG)
+LM$LM.12a <- lm( DAS ~ DRUG*WK+PLAC+PLAC:WK, data=TAB )
+summary(LM$LM.12a)
+## Include PLAC (w/o PLAC interactions)
+LM$LM.12b <- lm( DAS ~ DRUG*WK+PLAC, data=TAB )
+summary(LM$LM.12b)
+
+## Use 12b, add SEX interactions
+LM$LM.13 <- lm( DAS ~ (DRUG*WK+PLAC)*SEX, data=TAB )
+summary(LM$LM.13)
+## Remove SEX:DRUG:WK
+LM$LM.13a <- lm( DAS ~ (DRUG*WK+PLAC)*SEX-DRUG:SEX:WK, data=TAB )
+summary(LM$LM.13a)
+## Remove SEX:WK
+LM$LM.13b <- lm( DAS ~ (DRUG*WK+PLAC)*SEX-DRUG:SEX:WK-SEX:WK, data=TAB )
+summary(LM$LM.13b)
+## Remove SEX:PLAC
+LM$LM.13c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*SEX, data=TAB )
+summary(LM$LM.13c)
+## Remove SEX:DRUG
+LM$LM.13d <- lm( DAS ~ (DRUG*WK+PLAC)+SEX, data=TAB )
+summary(LM$LM.13d)
+
+## Use 12b, add RF_ACPA interactions
+LM$LM.14 <- lm( DAS ~ (DRUG*WK+PLAC)*RF_ACPA, data=TAB )
+summary(LM$LM.14)
+## Remove RF_ACPA:DRUG:WK
+LM$LM.14a <- lm( DAS ~ (DRUG*WK+PLAC)*RF_ACPA-DRUG:RF_ACPA:WK, data=TAB )
+summary(LM$LM.14a)
+## Remove RF_ACPA:WK
+LM$LM.14b <- lm( DAS ~ (DRUG*WK+PLAC)*RF_ACPA-DRUG:RF_ACPA:WK-RF_ACPA:WK, data=TAB )
+summary(LM$LM.14b)
+## Remove RF_ACPA:PLAC
+LM$LM.14c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, data=TAB )
+summary(LM$LM.14c)
+## Remove RF_ACPA:DRUG
+LM$LM.14d <- lm( DAS ~ (DRUG*WK+PLAC)+RF_ACPA, data=TAB )
+summary(LM$LM.14d)
+
+## Use 12b, add DIS_DUR interactions
+LM$LM.15 <- lm( DAS ~ (DRUG*WK+PLAC)*DIS_DUR, data=TAB )
+summary(LM$LM.15)
+## Remove DIS_DUR:DRUG:WK
+LM$LM.15a <- lm( DAS ~ (DRUG*WK+PLAC)*DIS_DUR-DRUG:DIS_DUR:WK, data=TAB )
+summary(LM$LM.15a)
+## Remove DIS_DUR:WK
+LM$LM.15b <- lm( DAS ~ (DRUG*WK+PLAC)*DIS_DUR-DRUG:DIS_DUR:WK-DIS_DUR:WK, data=TAB )
+summary(LM$LM.15b)
+## Remove DIS_DUR:PLAC
+LM$LM.15c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*DIS_DUR, data=TAB )
+summary(LM$LM.15c)
+## Remove DIS_DUR:DRUG
+LM$LM.15d <- lm( DAS ~ (DRUG*WK+PLAC)+DIS_DUR, data=TAB )
+summary(LM$LM.15d)
+
+## Use 12b, add BMI interactions
+LM$LM.16 <- lm( DAS ~ (DRUG*WK+PLAC)*BMI, data=TAB )
+summary(LM$LM.16)
+## Remove BMI:DRUG:WK
+LM$LM.16a <- lm( DAS ~ (DRUG*WK+PLAC)*BMI-DRUG:BMI:WK, data=TAB )
+summary(LM$LM.16a)
+## Remove BMI:WK
+LM$LM.16b <- lm( DAS ~ (DRUG*WK+PLAC)*BMI-DRUG:BMI:WK-BMI:WK, data=TAB )
+summary(LM$LM.16b)
+## Remove BMI:PLAC
+LM$LM.16c <- lm( DAS ~ (DRUG*WK+PLAC)+DRUG*BMI, data=TAB )
+summary(LM$LM.16c)
+## Remove BMI:DRUG
+LM$LM.16d <- lm( DAS ~ (DRUG*WK+PLAC)+BMI, data=TAB )
+summary(LM$LM.16d)
+
+
+################################################
+## Compile Info about all Models
+
+## Specify Number and Names of Models
+LM.N.models <- length(LM)
+LM.Names.models <- names(LM)
+
+## Get all Terms used in any model
+LM.terms <- Reduce( union, lapply( LM, function(x) names(coef(x)) ) )
+# LM.terms <- sort( LM.terms )
+LM.N.terms <- length(LM.terms)
+
+## Determine which Terms are in each model
+LM.ARR.terms <- array( 0, c(LM.N.terms,LM.N.models) )
+LM.ARR.terms.p <- array( 1, c(LM.N.terms,LM.N.models) )
+colnames(LM.ARR.terms) <- colnames(LM.ARR.terms.p) <- LM.Names.models
+rownames(LM.ARR.terms) <- rownames(LM.ARR.terms.p) <- LM.terms
+for ( m in 1:length(LM) ) {
+	mod <- names(LM)[m]
+	which.in <- which( LM.terms %in% names(coef(LM[[mod]])) )
+	which.terms <- LM.terms[which.in]
+	LM.ARR.terms[which.in,mod] <- 1
+	which.terms.2 <- which.terms[ which( which.terms %in% rownames(summary(LM[[mod]])$coefficients) ) ]
+	which.in.2 <- which( LM.terms %in% which.terms.2 )
+	LM.ARR.terms.p[which.in.2,mod] <- summary(LM[[mod]])$coefficients[which.terms.2,"Pr(>|t|)"]
 }
+ # Presence of each Term
+# COLS <- c("black","green")
+# heatmap.2( LM.ARR.terms, trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(5,10) )
+ # P-Values for each Term
+COLS.list <- c("firebrick1","chocolate1","gold1","springgreen2","steelblue2","slateblue3","black")
+COLS <- c( "firebrick1",colorRampPalette(COLS.list[3:7])(19) ) # colorRampPalette(COLS.list)(20)
+ROW.COLS <- rep("deepskyblue2",LM.N.terms) ; ROW.COLS[grep("DRUG",LM.terms)] <- "chartreuse2"
+png( paste(PathToPlot,"1-LM_ModBuild.png",sep="/"), height=1200,width=1600,pointsize=30 )
+# heatmap.2( LM.ARR.terms.p, trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(5,10),RowSideColors=ROW.COLS )
+heatmap.2( LM.ARR.terms.p, main="Inclusion/Significance of Terms in Models",xlab="Model",ylab="Term",trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(6,11),lhei=c(2,9),lwid=c(1,6),RowSideColors=ROW.COLS )
+dev.off()
 
-## Pull out p-value for Variants
-LM.VAR.p.var <- unlist(lapply( LM.VAR, function(x) summary(x)$tTable["cand","p-value"] ))
-LM.VAR.p.int <- unlist(lapply( LM.VAR, function(x) summary(x)$tTable["DRUG:cand","p-value"] ))
+## Determine which models have DRUG interactions
+LM.drugint <- as.numeric(unlist( lapply( LM, function(x) any(grepl( "DRUG:|:DRUG", names(coef(x)) ))) ))
 
-plot( -log10(LM.VAR.p.var), col="dodgerblue2",pch="+", ylim=c(0,9) )
-points( -log10(LM.VAR.p.int), col="chartreuse2",pch="+" )
-
-
-##############################################################
-## END OF DOC ################################################
-##############################################################
