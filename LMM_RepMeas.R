@@ -19,15 +19,19 @@ DATE <- "20150424"
 ## Mac Paths
 PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150226_Resp_v_Time.txt"
 PathToRawFiles <- "/Users/kstandis/Data/Burn/Data/Phenos/Raw_Files/"
+PathToFT <- "/Users/kstandis/Data/Burn/Data/Phenos/Full_Tables/"
 PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,sep="" )
 
 ## Previously Compiled Data
 TAB <- read.table( PathToData, sep="\t",header=T )
+FUL <- read.table( paste(PathToFT,"20141229_Full_Table.txt",sep=""),sep="\t",header=T)
+TAB.2 <- merge( TAB, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
 # Get unique Weeks for plotting purposes
 WKS <- unique( TAB$WK )
 
 ## Load Candidate Genotype Files
-COMP <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/CND_LT8_DEL_MNe_MN_DAS_BL_MN_PC1_PC2.compile.short", sep="\t",header=T)
+COMP.l <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/CND_LT8_DEL_MNe_MN_DAS_BL_MN_PC1_PC2.compile.short", sep="\t",header=T)
+COMP <- COMP.l[ which(!duplicated(COMP.l$SNP)), ]
 RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw", sep="",header=T)
 
 ##############################################################
@@ -481,48 +485,48 @@ hist( coef(LME$LME.14)[,"WK"], col=COLS[3] )
 hist( coef(LME$LME.14)[,"WK"]+coef(LME$LME.14)[,"DRUG:WK"], col=COLS[4] )
 
 ## All Data Points
-COLS.list <- c("firebrick3","chocolate2","gold2","springgreen2","steelblue2","slateblue3")
-COLS <- COLS.list
-LIM <- c(0,10)
-png( paste(PathToPlot,"/Pl_Scatter_ObsExp.png",sep=""), height=2400,width=1800, pointsize=26 )
-par(mfrow=c(4,3))
-plot( data.frame( TAB$DAS, predict(LME.1) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( data.frame( TAB$DAS, predict(LME.1b) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( data.frame( TAB$DAS, predict(LM.1) ), col=COLS[c(1,4)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( data.frame( TAB$DAS, predict(LME.11) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( data.frame( TAB$DAS, predict(LME.11b) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( data.frame( TAB$DAS, predict(LM.11) ), col=COLS[c(1,4)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( 0,0,type="n", col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( data.frame( TAB$DAS, predict(LME.12b) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( data.frame( TAB$DAS, predict(LM.12) ), col=COLS[c(1,4)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( 0,0,type="n", col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( data.frame( TAB$DAS, predict(LME.14c) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-plot( data.frame( TAB$DAS, predict(LM.14) ), col=COLS[c(1,4)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
-abline( 0,1, lty=2 )
-dev.off()
+# COLS.list <- c("firebrick3","chocolate2","gold2","springgreen2","steelblue2","slateblue3")
+# COLS <- COLS.list
+# LIM <- c(0,10)
+# png( paste(PathToPlot,"/Pl_Scatter_ObsExp.png",sep=""), height=2400,width=1800, pointsize=26 )
+# par(mfrow=c(4,3))
+# plot( data.frame( TAB$DAS, predict(LME.1) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( data.frame( TAB$DAS, predict(LME.1b) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( data.frame( TAB$DAS, predict(LM.1) ), col=COLS[c(1,4)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( data.frame( TAB$DAS, predict(LME.11) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( data.frame( TAB$DAS, predict(LME.11b) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( data.frame( TAB$DAS, predict(LM.11) ), col=COLS[c(1,4)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( 0,0,type="n", col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( data.frame( TAB$DAS, predict(LME.12b) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( data.frame( TAB$DAS, predict(LM.12) ), col=COLS[c(1,4)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( 0,0,type="n", col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( data.frame( TAB$DAS, predict(LME.14c) ), col=COLS[c(2,5)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# plot( data.frame( TAB$DAS, predict(LM.14) ), col=COLS[c(1,4)][factor(TAB$DRUG)],pch=3,xlim=LIM,ylim=LIM )
+# abline( 0,1, lty=2 )
+# dev.off()
 
-## All Data Points
-pairs( data.frame( TAB$DAS, predict(LME.1b),predict(LME.11b),predict(LME.12b) ), col=COLS[factor(TAB$PLAC)], pch="." )
+# ## All Data Points
+# pairs( data.frame( TAB$DAS, predict(LME.1b),predict(LME.11b),predict(LME.12b) ), col=COLS[factor(TAB$PLAC)], pch="." )
 
-png( "Dropbox/Schork/JNJ11/Slides/20150416_PA_Visit/MEM_Ex_2_hist2.png",height=1400,width=1400,pointsize=30 )
-par(mfrow=c(2,2))
-hist( coef(LME$LME.1b)[,1], main="Distribution of Intercept Terms",xlab="Beta(0)",ylab="# Patients",col="dodgerblue1" )
-plot(0,0,type="n",xlab="",ylab="",xaxt="n",yaxt="n",xlim=c(-1,1),ylim=c(-1,1) )
-text( 0,0, round( cor( coef(LME$LME.1b)[,1],coef(LME$LME.1b)[,2] ) ,3), col="purple2",cex=3 )
-plot( coef(LME$LME.1b)[,1],coef(LME$LME.1b)[,2], main="Correlation b/n Random Effects Estimates",xlab="Beta(0)",ylab="Beta(dr)",col="purple2" )
-hist( coef(LME$LME.1b)[,2], main="Distribution of Drug Terms",xlab="Beta(dr)",ylab="# Patients",col="firebrick1" )
-dev.off()
+# png( "Dropbox/Schork/JNJ11/Slides/20150416_PA_Visit/MEM_Ex_2_hist2.png",height=1400,width=1400,pointsize=30 )
+# par(mfrow=c(2,2))
+# hist( coef(LME$LME.1b)[,1], main="Distribution of Intercept Terms",xlab="Beta(0)",ylab="# Patients",col="dodgerblue1" )
+# plot(0,0,type="n",xlab="",ylab="",xaxt="n",yaxt="n",xlim=c(-1,1),ylim=c(-1,1) )
+# text( 0,0, round( cor( coef(LME$LME.1b)[,1],coef(LME$LME.1b)[,2] ) ,3), col="purple2",cex=3 )
+# plot( coef(LME$LME.1b)[,1],coef(LME$LME.1b)[,2], main="Correlation b/n Random Effects Estimates",xlab="Beta(0)",ylab="Beta(dr)",col="purple2" )
+# hist( coef(LME$LME.1b)[,2], main="Distribution of Drug Terms",xlab="Beta(dr)",ylab="# Patients",col="firebrick1" )
+# dev.off()
 
 ##############################################################
 ## INCORPORATE VARIANTS ######################################
@@ -532,10 +536,13 @@ dev.off()
 ## CHANGING COLNAMES & STUFF SO I KNOW WHERE VARIANTS ARE ON THE PLOT #####
 
 ## Pull out Candidate SNPs
-THRSH <- 1e-6
-CAND.which <- which( COMP$P_Assoc < 1e-5 )
+THRSH <- 5e-5 # 5e-5
+CAND.which <- which( COMP$P_Assoc < THRSH )
+# CAND.which <- which( COMP$P_Assoc >= THRSH )
+CAND.p <- COMP$P_Assoc[CAND.which]
 CAND.id <- COMP$SNP[CAND.which] # paste( COMP$SNP[CAND.which], COMP$Allele[CAND.which], sep="_" )
 CAND.loc <- paste( COMP$CHR[CAND.which], COMP$BP[CAND.which], sep="_" )
+CAND.tag <- data.frame( ID=CAND.id, LOC=CAND.loc, P=CAND.p )
 
 RAW.colnames <- unlist(lapply(strsplit( colnames(RAW), "_" ), function(x) paste(x[-length(x)],collapse="_") ))
 RAW.colnames <- gsub(".",":",RAW.colnames,fixed=T )
@@ -543,49 +550,84 @@ RAW.colnames.which.X <- which( substr(RAW.colnames,1,2) %in% paste("X",1:22,sep=
 RAW.colnames[RAW.colnames.which.X] <- gsub("X","",RAW.colnames[RAW.colnames.which.X],fixed=T )
 # RAW.colnames <- RAW.colnames[ which(RAW.colnames!="") ]
 
-CAND.rawcols <- which( RAW.colnames %in% CAND.id )
+CAND.intersect <- intersect( RAW.colnames, CAND.tag$ID )
+CAND.rawcols <- which( RAW.colnames %in% CAND.intersect )
+CAND.tagrows <- which( CAND.tag$ID %in% CAND.intersect )
 RAW.cand <- RAW[,c(1,CAND.rawcols)]
+CAND.tag.2 <- CAND.tag[ CAND.tagrows, ]
 CAND.colnames <- colnames(RAW.cand)[2:ncol(RAW.cand)]
 
 ## Merge Candidate SNPs w/ Clinical Variables
-MG <- merge( x=TAB, y=RAW.cand, by="FID" )
+MG <- merge( x=TAB.2, y=RAW.cand, by="FID" )
 
 ## Test Model that includes each Variant Individually
 LME.VAR <- list()
+GWAS.p <- numeric( length(CAND.colnames) )
+GWAS.id <- rep("", length(CAND.colnames) )
+start_time <- proc.time()
 for ( c in 1:length(CAND.colnames) ) {
 # for ( c in 1:5 ) {
 	cand <- CAND.colnames[c]
-	TEMP_DAT <- MG[,c("IID","DAS","DRUG",cand)]
+	cand.loc <- as.character(CAND.tag.2$LOC[c])
+	TEMP_DAT <- MG[,c("IID","DAS","DRUG",cand,"PC1","PC2")]
 	colnames(TEMP_DAT)[4] <- "cand"
-	LME.VAR[[cand]] <- lme( DAS ~ DRUG*cand, random= ~ DRUG | IID, data=TEMP_DAT )
-	if ( c%%10==0 ) { print(paste( "Done with",c,"of",length(CAND.colnames) )) }
+	# LME.VAR[[cand.loc]] <- lme( DAS ~ DRUG*cand, random= ~ DRUG | IID, data=TEMP_DAT )
+	LME.VAR[[cand.loc]] <- lme( DAS ~ DRUG*cand+PC1+PC2, random= ~ DRUG | IID, data=TEMP_DAT )
+	GWAS.p[c] <- CAND.tag.2$P[c]
+	GWAS.id[c] <- as.character(CAND.tag.2$ID[c])
+	names(GWAS.p)[c] <- cand.loc
+	run_time <- round( proc.time()-start_time, 2)[3]
+	if ( c%%10==0 ) { print(paste( "Done with",c,"of",length(CAND.colnames),"-",run_time )) }
 }
 
 ## Pull out p-value for Variants
-GWAS.p <- COMP$P_Assoc[CAND.which] ; names(GWAS.p) <- paste( COMP$SNP[CAND.which], COMP$Allele[CAND.which], sep="_" )
-GWAS.p <- GWAS.p[ which(names(GWAS.p) %in% CAND.colnames) ]
 LME.VAR.p.var <- unlist(lapply( LME.VAR, function(x) summary(x)$tTable["cand","p-value"] ))
 LME.VAR.p.int <- unlist(lapply( LME.VAR, function(x) summary(x)$tTable["DRUG:cand","p-value"] ))
+P.comp <- data.frame( ID=GWAS.id, GWAS=GWAS.p, DIS=LME.VAR.p.var, DR=LME.VAR.p.int )
 
 ## Plot P-Values for Variants vs Drug Response
-COLS <- c("dodgerblue2","chartreuse2","tomato2")
-plot( -log10(LME.VAR.p.var), main="Variant Effect in Mixed Model", col=COLS[1],pch="+", ylim=c(0,9),xaxt="n",xlab="Variant",ylab="-log10(p)",cex=1.5 )
-points( -log10(LME.VAR.p.int), col=COLS[2],pch="+",cex=1.5 )
-points( -log10(GWAS.p), col=COLS[3],pch="+",cex=1.5 )
-axis( 1, at=1:length(LME.VAR.p.var), label=names(LME.VAR.p.var),las=2,cex.axis=.8 )
+COLS <- c("dodgerblue2","chocolate2","chartreuse2")
+png( paste(PathToPlot,"V-LME_P-Vals.png",sep="/"), height=1000+nrow(P.comp),width=1600+5*nrow(P.comp),pointsize=30 )
+plot( -log10(P.comp$GWAS), main="Variant Effect in Mixed Model", col=COLS[1],pch="+", ylim=c(0,9),xaxt="n",xlab="Variant",ylab="-log10(p)",cex=1.5 )
+points( -log10(P.comp$DIS), col=COLS[2],pch="+",cex=1.5 )
+points( -log10(P.comp$DR), col=COLS[3],pch="+",cex=1.5 )
+axis( 1, at=1:nrow(P.comp), label=rownames(P.comp),las=2,cex.axis=.7 )
 abline( h=seq(0,15,1),lty=2,col="grey50")
 abline( h=-log10(5e-8),lty=2,col="firebrick2")
 abline( h=-log10(.05),lty=2,col="firebrick2")
-legend( "topleft",legend=c("Disease Level","Drug Response","GWAS"),col=COLS,pch="+",pt.cex=1.5)
+legend( "bottomleft",legend=colnames(P.comp),col=COLS,pch="+",pt.cex=1.5)
+dev.off()
+ # Only variants w/ P<1e-6
+P.comp.2 <- P.comp[ which(apply( P.comp[c("GWAS","DIS","DR")], 1, function(x) any(x<1e-6) )) , ]
+png( paste(PathToPlot,"V-LME_P-Vals_CAND.png",sep="/"), height=1000+nrow(P.comp.2),width=1600+5*nrow(P.comp.2),pointsize=30 )
+plot( -log10(P.comp.2$GWAS), main="Variant Effect in Mixed Model", col=COLS[1],pch="+", ylim=c(0,9),xaxt="n",xlab="Variant",ylab="-log10(p)",cex=1.5 )
+points( -log10(P.comp.2$DIS), col=COLS[2],pch="+",cex=1.5 )
+points( -log10(P.comp.2$DR), col=COLS[3],pch="+",cex=1.5 )
+axis( 1, at=1:nrow(P.comp.2), label=rownames(P.comp.2),las=2,cex.axis=.7 )
+abline( h=seq(0,15,1),lty=2,col="grey50")
+abline( h=-log10(5e-8),lty=2,col="firebrick2")
+abline( h=-log10(.05),lty=2,col="firebrick2")
+# legend( "topleft",legend=c("Disease Level","Drug Response","GWAS"),col=COLS,pch="+",pt.cex=1.5)
+legend( "bottomleft",legend=colnames(P.comp.2),col=COLS,pch="+",pt.cex=1.5)
+dev.off()
 
-## Plot GWAS results vs 
 
+## Plot GWAS results vs LMM Results
+quartz()
+LIM <- c(0, -log10(min(P.comp,na.rm=T)) )
+plot( -log10(P.comp$GWAS),-log10(P.comp$DR),xlim=LIM,ylim=LIM,xlab="GWAS",ylab="LMM",main="GWAS vs LMM for Drug Response",pch="+",col=colorRampPalette(COLS[c(1,3)])(3)[2],cex=1.5 )
+abline( v=seq(0,10,1),lty=2,col="grey50") ; abline( h=seq(0,10,1),lty=2,col="grey50") 
+abline(0,1,lty=1,col="black")
+abline( h=-log10(5e-8),lty=2,col="firebrick2") ; abline( v=-log10(5e-8),lty=2,col="firebrick2")
+cor( -log10(P.comp$GWAS),-log10(P.comp$DR) )
 
 ##############################################################
 ## END OF DOC ################################################
 ##############################################################
 
-
+P.comp.A <- P.comp
+P.comp.B <- P.comp
+P.comp.2[ which(P.comp.2$DR<5e-8), ]
 ##############################################################
 ## LIST OF LINEAR MODELS #####################################
 ##############################################################
