@@ -349,6 +349,7 @@ LME_MOD <- function( TAB ) {
 	# # summary(LME$LME.23b) # Did not Converge!!!!
 
 	## Use 12b, include COUN as Hierarchical Grouping Factor as well
+	print("Running Mods: 23")
 	LME$LME.23 <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB )
 	 # Switch to COUN/IID (IID %in% COUN) in simple model
 	LME$LME.23a <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | COUN/IID, data=TAB )
@@ -356,9 +357,14 @@ LME_MOD <- function( TAB ) {
 	LME$LME.23b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG | COUN/IID, data=TAB )
 	 # Switch to COUN/IID (IID %in% COUN) in simple model
 	LME$LME.23c <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | COUN/IID, data=TAB )
+	anova( LME$LME.12b, LME$LME.23, LME$LME.12d, LME$LME.23b )
 
+	## Use 23, include CorStruct
+	LME$LME.24 <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	LME$LME.24a <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	
 	###### SO FAR, 14c & 14d are only models with ALL significant terms ######
-	###### RETURN COMPILED MODEL ######
+	## Return Compiled Models
 	return(LME)
 
 }
