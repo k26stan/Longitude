@@ -18,7 +18,8 @@ DATE <- "20150513"
 
 ## Mac Paths
 # PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150226_Resp_v_Time.txt"
-PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150506_Resp_v_Time.txt"
+# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150506_Resp_v_Time.txt"
+PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150512_Resp_v_Time.txt"
 PathToRawFiles <- "/Users/kstandis/Data/Burn/Data/Phenos/Raw_Files/"
 PathToFT <- "/Users/kstandis/Data/Burn/Data/Phenos/Full_Tables/"
 PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,sep="" )
@@ -39,10 +40,16 @@ RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw
 ## FILTER DATA ###############################################
 ##############################################################
 
-## Take out Patients who left before getting DRUG
+## Remove some patients & timepoints
+ # Patients who left before getting DRUG
 RM.exit.id <- as.character( FUL$ID_2[which(FUL$IN<=4)] )
 RM.exit <- which( TAB.l$IID %in% RM.exit.id )
-TAB <- TAB.l[-RM.exit,c(1:15,17)]
+ # Timepoints where DAS==NA
+RM.na <- which(is.na( TAB.l$DAS ))
+
+## Remove
+RM <- union( RM.exit, RM.na )
+TAB <- TAB.l[-RM,c(1:15,17)]
 
 ##############################################################
 ## CREATE PLOTTING FUNCTIONS #################################
@@ -213,7 +220,7 @@ LME_MOD <- function( TAB ) {
 
 	## Revert to Intercept only in Correlation
 	## Include WK in Random Effects
-	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 7"))
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 6"))
 	LME$M6a <- lme( fixed = DAS ~ DRUG*WK, random = ~ WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
 	LME$M6b <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
 	LME$M6c <- lme( fixed = DAS ~ DRUG*WK, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(form = ~1 | IID/DRUG) )
@@ -223,7 +230,7 @@ LME_MOD <- function( TAB ) {
 	COMP <- PLOT_MODS( LME[6:length(LME)] )
 
 	## Include Fixed PLAC Effect
-	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 6"))
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 7"))
 	LME$M7a <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ 1 | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
 	LME$M7b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
 	LME$M7c <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ 1 | IID/DRUG, data=TAB, correlation=corCAR1(form = ~1 | IID/DRUG) )
@@ -235,19 +242,19 @@ LME_MOD <- function( TAB ) {
 	## Include Fixed RF_ACPA*DRUG Interaction
 	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 8"))
 	LME$M8b <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA)+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
-	LME$M8c <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA)+PLAC, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(form = ~1 | IID/DRUG) )
+	# LME$M8c <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA)+PLAC, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(form = ~1 | IID/DRUG) )
 	LME$M8e <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA)+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
 	 # Choose Amongst Models
-	anova(LME$M8b,LME$M8c,LME$M8e)
+	anova(LME$M8b,LME$M8e)
 	COMP <- PLOT_MODS( LME[6:length(LME)] )
 
 	## Try Fixed ACPA*DRUG Interaction Instead of RF_ACPA*DRUG
 	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 9"))
 	LME$M9b <- lme( fixed = DAS ~ DRUG*(WK+I(ACPA=="Positive"))+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
-	LME$M9c <- lme( fixed = DAS ~ DRUG*(WK+I(ACPA=="Positive"))+PLAC, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(form = ~1 | IID/DRUG) )
+	# LME$M9c <- lme( fixed = DAS ~ DRUG*(WK+I(ACPA=="Positive"))+PLAC, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(form = ~1 | IID/DRUG) )
 	LME$M9e <- lme( fixed = DAS ~ DRUG*(WK+I(ACPA=="Positive"))+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
 	 # Choose Amongst Models
-	anova(LME$M9b,LME$M9c,LME$M9e)
+	anova(LME$M9b,LME$M9e)
 	COMP <- PLOT_MODS( LME[6:length(LME)] )
 
 	## Try Fixed RF*DRUG Interaction Instead of RF_ACPA*DRUG
@@ -453,222 +460,91 @@ dev.off()
 
 
 
+##############################################################
+## TESTING CorStruct #########################################
+##############################################################
 
 
+COR <- list()
 
-
-
-
-
-
-
-
-	## Add DRUG*SEX Interaction
-	LIS$M2 <- lme( fixed = DAS ~ DRUG*SEX, random = ~ DRUG | IID, data=TAB )
-	## Change to DRUG+SEX
-	LIS$M2a <- lme( fixed = DAS ~ DRUG+SEX, random = ~ DRUG | IID, data=TAB )
-
-	## Change to DRUG*AGE
-	LIS$M3 <- lme( fixed = DAS ~ DRUG*AGE, random = ~ DRUG | IID, data=TAB )
-	## Change to DRUG+AGE
-	LIS$M3a <- lme( fixed = DAS ~ DRUG+AGE, random = ~ DRUG | IID, data=TAB )
-
-	## Change to DRUG*DIS_DUR
-	LIS$M4 <- lme( fixed = DAS ~ DRUG*DIS_DUR, random = ~ DRUG | IID, data=TAB )
-	## Change to DRUG+DIS_DUR
-	LIS$M4a <- lme( fixed = DAS ~ DRUG+DIS_DUR, random = ~ DRUG | IID, data=TAB )
-
-	## Remove DIS_DUR, add DRUG*HT
-	LIS$M5 <- lme( fixed = DAS ~ DRUG*HT, random = ~ DRUG | IID, data=TAB )
-	## Change to DRUG+HT
-	LIS$M5a <- lme( fixed = DAS ~ DRUG+HT, random = ~ DRUG | IID, data=TAB )
-
-	## Change to DRUG*WT
-	LIS$M6 <- lme( fixed = DAS ~ DRUG*WT, random = ~ DRUG | IID, data=TAB )
-	## Change to DRUG+WT
-	LIS$M6a <- lme( fixed = DAS ~ DRUG+WT, random = ~ DRUG | IID, data=TAB )
-
-	## Change to DRUG*BMI
-	LIS$M7 <- lme( fixed = DAS ~ DRUG*BMI, random = ~ DRUG | IID, data=TAB )
-	## Change to DRUG+BMI
-	LIS$M7a <- lme( fixed = DAS ~ DRUG+BMI, random = ~ DRUG | IID, data=TAB )
-
-	## Change to DRUG*ACPA
-	LIS$M8 <- lme( fixed = DAS ~ DRUG*ACPA, random = ~ DRUG | IID, data=TAB, subset=ACPA!="" )
-	## Change to DRUG+ACPA
-	LIS$M8a <- lme( fixed = DAS ~ DRUG+ACPA, random = ~ DRUG | IID, data=TAB, subset=ACPA!="" )
-
-	## Change to DRUG*RF
-	LIS$M9 <- lme( fixed = DAS ~ DRUG*RF, random = ~ DRUG | IID, data=TAB )
-	## Change to DRUG+RF
-	LIS$M9a <- lme( fixed = DAS ~ DRUG+RF, random = ~ DRUG | IID, data=TAB )
-
-	## Change to DRUG*RF_ACPA
-	LIS$M10 <- lme( fixed = DAS ~ DRUG*RF_ACPA, random = ~ DRUG | IID, data=TAB )
-	## Change to DRUG+RF_ACPA
-	LIS$M10a <- lme( fixed = DAS ~ DRUG+RF_ACPA, random = ~ DRUG | IID, data=TAB )
-
-	## Change to DRUG*WK
-	LIS$M11 <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | IID, data=TAB )
-	## Change to DRUG+WK
-	LIS$M11a <- lme( fixed = DAS ~ DRUG+WK, random = ~ DRUG | IID, data=TAB )
-	## Back to DRUG*WK, add WK as Random Effect
-	LIS$M11b <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Back to DRUG+WK, keep WK as Random Effect
-	LIS$M11c <- lme( fixed = DAS ~ DRUG+WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Back to DRUG*WK, add DRUG*WK as Random Effect
-	# LIS$M11d <- lme( fixed = DAS ~ DRUG+WK, random = ~ DRUG*WK | IID, data=TAB )
-
-	## Include PLAC (all 2-way interactions)
-	# LIS$M12 <- lme( fixed = DAS ~ (DRUG+WK+PLAC)^2, random = ~ DRUG | IID, data=TAB )
-	## Include PLAC (2-way interactions w/o PLAC:DRUG)
-	# LIS$M12a <- lme( fixed = DAS ~ DRUG*WK+PLAC+PLAC:WK, random = ~ DRUG | IID, data=TAB )
-	## Include PLAC (w/o PLAC interactions)
-	LIS$M12b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID, data=TAB )
-	## Add PLAC as Random Effect
-	# LIS$M12c <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK+PLAC | IID, data=TAB )
-	## Try w/ only DRUG as Random Effect
-	LIS$M12d <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG | IID, data=TAB )
-
-	## Use 12b, add SEX interactions
-	LIS$M13 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*SEX, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove SEX:DRUG:WK
-	LIS$M13a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*SEX-DRUG:SEX:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove SEX:WK
-	LIS$M13b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*SEX-DRUG:SEX:WK-SEX:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove SEX:PLAC
-	LIS$M13c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*SEX, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove SEX:DRUG
-	LIS$M13d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+SEX, random = ~ DRUG+WK | IID, data=TAB )
-
-	## Use 12b, add RF_ACPA interactions
-	LIS$M14 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF_ACPA, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF_ACPA:DRUG:WK
-	LIS$M14a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF_ACPA-DRUG:RF_ACPA:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF_ACPA:WK
-	LIS$M14b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF_ACPA-DRUG:RF_ACPA:WK-RF_ACPA:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF_ACPA:PLAC
-	LIS$M14c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF_ACPA:DRUG
-	LIS$M14d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+RF_ACPA, random = ~ DRUG+WK | IID, data=TAB )
-	## Include RF_ACPA as Grouping
-	# LIS$M14ca <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | RF_ACPA/IID, data=TAB )
-	## Include RF_ACPA as Random Effect
-	# LIS$M14da <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+RF_ACPA, random = ~ DRUG+WK | RF_ACPA/IID, data=TAB )
-	## Decide: w/ or w/o RF_ACPA:DRUG interaction??
-
-	## Use 12b, add DIS_DUR interactions
-	LIS$M15 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove DIS_DUR:DRUG:WK
-	LIS$M15a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*DIS_DUR-DRUG:DIS_DUR:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove DIS_DUR:WK
-	LIS$M15b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*DIS_DUR-DRUG:DIS_DUR:WK-DIS_DUR:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove DIS_DUR:PLAC
-	LIS$M15c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove DIS_DUR:DRUG
-	LIS$M15d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
-
-	## Use 12b, add BMI interactions
-	LIS$M16 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*BMI, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove BMI:DRUG:WK
-	LIS$M16a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*BMI-DRUG:BMI:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove BMI:WK
-	LIS$M16b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*BMI-DRUG:BMI:WK-BMI:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove BMI:PLAC
-	LIS$M16c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*BMI, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove BMI:DRUG
-	LIS$M16d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+BMI, random = ~ DRUG+WK | IID, data=TAB )
-
-	## Use 12b, add AGE interactions
-	LIS$M17 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*AGE, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove AGE:DRUG:WK
-	LIS$M17a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*AGE-DRUG:AGE:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove AGE:WK
-	LIS$M17b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*AGE-DRUG:AGE:WK-AGE:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove AGE:PLAC
-	LIS$M17c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*AGE, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove AGE:DRUG
-	LIS$M17d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+AGE, random = ~ DRUG+WK | IID, data=TAB )
-
-	## Use 12b, add RF interactions
-	LIS$M18 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF:DRUG:WK
-	LIS$M18a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF-DRUG:RF:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF:WK
-	LIS$M18b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*RF-DRUG:RF:WK-RF:WK, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF:PLAC
-	LIS$M18c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF:DRUG
-	LIS$M18d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+RF, random = ~ DRUG+WK | IID, data=TAB )
-
-	## Use 12b, add ACPA interactions
-	LIS$M19 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*ACPA, random = ~ DRUG+WK | IID, data=TAB, subset=ACPA!="" )
-	## Remove ACPA:DRUG:WK
-	LIS$M19a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*ACPA-DRUG:ACPA:WK, random = ~ DRUG+WK | IID, data=TAB, subset=ACPA!="" )
-	## Remove ACPA:WK
-	LIS$M19b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)*ACPA-DRUG:ACPA:WK-ACPA:WK, random = ~ DRUG+WK | IID, data=TAB, subset=ACPA!="" )
-	## Remove ACPA:PLAC
-	LIS$M19c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*ACPA, random = ~ DRUG+WK | IID, data=TAB, subset=ACPA!="" )
-	## Remove ACPA:DRUG
-	LIS$M19d <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+ACPA, random = ~ DRUG+WK | IID, data=TAB, subset=ACPA!="" )
-
-	###### SO FAR, 14c & 14d are only models with ALL significant terms ######
-	############## Use 14c (includes RF_ACPA*DRUG) and go from here ##########
-
-	## Use 14c, add DIS_DUR*DRUG interactions
-	LIS$M20 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+DRUG*DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF_ACPA:PLAC
-	LIS$M20a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+DIS_DUR, random = ~ DRUG+WK | IID, data=TAB )
-
-	## Use 14c, add AGE*DRUG interactions
-	LIS$M21 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+DRUG*AGE, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF_ACPA:PLAC
-	LIS$M21a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+AGE, random = ~ DRUG+WK | IID, data=TAB )
-
-	## Use 14c, add BMI*DRUG interactions
-	LIS$M22 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+DRUG*BMI, random = ~ DRUG+WK | IID, data=TAB )
-	## Remove RF_ACPA:PLAC
-	LIS$M22a <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA+BMI, random = ~ DRUG+WK | IID, data=TAB )
-
-	###### SO FAR, 14c & 14d are only models with ALL significant terms ######
-	############## Use 14c (includes RF_ACPA*DRUG) and go from here ##########
-	## PROBLEM: Trajectory during Placebo may not match Trajectory during Treatment
-
-	## Use 14c, include DRUG*WK interactions in Random Effects
-	# LIS$M23 <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, random = ~ DRUG*WK | IID, data=TAB )
-	# # summary(LIS$M23) # Did not Converge, Try Simpler Fixed Effects
-	## Get Rid of RF_ACPA, just keep WK, DRUG, PLAC
-	# LIS$M23a <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG*WK | IID, data=TAB )
-	# # summary(LIS$M23a) # Did not Converge!!!!
-	## Try including PLAC*WK interaction as well, instead of DRUG*WK in Random Effects
-	# LIS$M23b <- lme( fixed = DAS ~ DRUG*WK+PLAC*WK, random = ~ DRUG+WK | IID, data=TAB )
-	# # summary(LIS$M23b) # Did not Converge!!!!
-	## Try including PLAC*WK interaction as well, instead of DRUG*WK in Random Effects
-	# LIS$M23b <- lme( fixed = DAS ~ WK*factor(TRT), random = ~ 1 | IID, data=TAB )
-	# # summary(LIS$M23b) # Did not Converge!!!!
-
-	## Use 12b, include COUN as Hierarchical Grouping Factor as well
-	print("Running Mods: 23")
-	LIS$M23 <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB )
-	 # Switch to COUN/IID (IID %in% COUN) in simple model
-	LIS$M23a <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | COUN/IID, data=TAB )
-	 # Switch to COUN/IID (IID %in% COUN) in simple model
-	LIS$M23b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG | COUN/IID, data=TAB )
-	 # Switch to COUN/IID (IID %in% COUN) in simple model
-	LIS$M23c <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | COUN/IID, data=TAB )
-	anova( LIS$M12b, LIS$M23, LIS$M12d, LIS$M23b )
-
-	## Use 23, include CorStruct
-	LIS$M24 <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
-	LIS$M24a <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
-	LIS$M24b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
-	LIS$M24c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
-	anova( LIS$M24, LIS$M24a )
-
-	###### SO FAR, 14c & 14d are only models with ALL significant terms ######
-	## Return Compiled Models
-	return(LIS)
-
+for ( v in 1:10 ) {
+	COR[[paste("M",v,sep=".")]] <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(value = v/10, form = ~1 | IID) )	
 }
 
-LIS <- LIS_MOD( TAB )
+
+
+cor.1 <- corCAR1(value = .1, form = ~1 | IID)
+cor.1 <- Initialize( cor.1, data=TAB )
+cor.1.mat <- corMatrix( cor.1 )
+heatmap.2( cor.1.mat$`F320833-27`, scale="none",Colv=F,Rowv=F, trace="none",dendrogram="none" )
+
+cor.2 <- corCAR1(value = .2, form = ~1 | IID)
+cor.2 <- Initialize( cor.2, data=TAB )
+cor.2.mat <- corMatrix( cor.2 )
+heatmap.2( cor.2.mat$`F320833-27`, scale="none",Colv=F,Rowv=F, trace="none",dendrogram="none" )
+
+cor.9 <- corCAR1(value = .9, form = ~1 | IID)
+cor.9 <- Initialize( cor.9, data=TAB )
+cor.9.mat <- corMatrix( cor.9 )
+heatmap.2( cor.9.mat$`F320833-27`, scale="none",Colv=F,Rowv=F, trace="none",dendrogram="none" )
+
+cor.9 <- corCAR1(value = .9, form = ~1 | DRUG/IID)
+cor.9 <- Initialize( cor.9, data=TAB )
+cor.9.mat <- corMatrix( cor.9 )
+heatmap.2( cor.9.mat$`1/B012328-28`, scale="none",Colv=F,Rowv=F, trace="none",dendrogram="none" )
+quartz() ; heatmap.2( cor.9.mat$`0/B012328-28`, scale="none",Colv=F,Rowv=F, trace="none",dendrogram="none" )
+
+
+cor.9 <- corCAR1(value = .9, form = ~WK | DRUG/IID)
+cor.9 <- Initialize( cor.9, data=TAB )
+cor.9.mat <- corMatrix( cor.9 )
+heatmap.2( cor.9.mat$`1/B012328-28`, scale="none",Colv=F,Rowv=F, trace="none",dendrogram="none" )
+quartz() ; heatmap.2( cor.9.mat$`0/B012328-28`, scale="none",Colv=F,Rowv=F, trace="none",dendrogram="none" )
+
+
+
+
+
+LME$M8b$call
+TEST <- TAB[ which(TAB$IID==TAB$IID[40]),]
+TEST.pred.0 <- predict( LME$M8b, newdata=TEST, level=0 )
+TEST.pred.1 <- predict( LME$M8b, newdata=TEST, level=1 )
+plot( TEST$WK, TEST$DAS, type="l",lty=2 )
+points( TEST$WK, TEST.pred.1, type="l",lty=1 )
+points( TEST$WK, TEST.pred.0, type="l",lty=3 )
+
+TEST.2 <- TEST
+TEST.2$WK <- sort( sample( 1:100, nrow(TEST.2) ) )
+TEST.2$DRUG <- 1 ; SWITCH <- sample(20:60,1)
+TEST.2$DRUG[ which(TEST.2$WK<SWITCH) ] <- 0
+TEST.2$PLAC <- 0
+TEST.2$PLAC[ which(TEST.2$DRUG!=1 & TEST.2$WK>0) ] <- 1
+TEST.pred.2 <- predict( LME$M8b, newdata=TEST.2, level=1 )
+points( TEST.2$WK, TEST.pred.2, type="o",lty=1,pch=20 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############################################################
+## SCRAPS!!!! ################################################
+##############################################################

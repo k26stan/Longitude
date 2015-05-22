@@ -24,16 +24,25 @@ PathToFT <- "/Users/kstandis/Data/Burn/Data/Phenos/Full_Tables/"
 PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,sep="" )
 
 ## Previously Compiled Data
-TAB <- read.table( PathToData, sep="\t",header=T )
+TAB.l <- read.table( PathToData, sep="\t",header=T )
 FUL <- read.table( paste(PathToFT,"20141229_Full_Table.txt",sep=""),sep="\t",header=T)
-TAB.2 <- merge( TAB, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
+TAB.2 <- merge( TAB.l, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
 # Get unique Weeks for plotting purposes
-WKS <- unique( TAB$WK )
+WKS <- unique( TAB.l$WK )
 
 ## Load Candidate Genotype Files
 COMP.l <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/CND_LT8_DEL_MNe_MN_DAS_BL_MN_PC1_PC2.compile.short", sep="\t",header=T)
 COMP <- COMP.l[ which(!duplicated(COMP.l$SNP)), ]
 RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw", sep="",header=T)
+
+##############################################################
+## FILTER DATA ###############################################
+##############################################################
+
+## Take out Patients who left before getting DRUG
+RM.exit.id <- as.character( FUL$ID_2[which(FUL$IN<=4)] )
+RM.exit <- which( TAB$IID %in% RM.exit.id )
+TAB <- TAB.l[-RM.exit,c(1:15,17)]
 
 ##############################################################
 ## LMM MODELS ################################################
@@ -362,7 +371,10 @@ LME_MOD <- function( TAB ) {
 	## Use 23, include CorStruct
 	LME$LME.24 <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
 	LME$LME.24a <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
-	
+	LME$LME.24b <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	LME$LME.24c <- lme( fixed = DAS ~ (DRUG*WK+PLAC)+DRUG*RF_ACPA, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	anova( LME$LME.24, LME$LME.24a )
+
 	###### SO FAR, 14c & 14d are only models with ALL significant terms ######
 	## Return Compiled Models
 	return(LME)
