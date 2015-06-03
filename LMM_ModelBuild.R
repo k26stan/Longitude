@@ -10,7 +10,7 @@ library(gplots)
 ##############################################################
 
 ## Set Date
-DATE <- "20150506"
+DATE <- "20150530"
 
 # ## TSCC Paths
 # PathToData <- "/projects/janssen/clinical/"
@@ -18,15 +18,17 @@ DATE <- "20150506"
 
 ## Mac Paths
 # PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150226_Resp_v_Time.txt"
-PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150506_Resp_v_Time.txt"
+# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150506_Resp_v_Time.txt"
+# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150512_Resp_v_Time.txt"
+PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150530_Resp_v_Time.txt"
 PathToRawFiles <- "/Users/kstandis/Data/Burn/Data/Phenos/Raw_Files/"
 PathToFT <- "/Users/kstandis/Data/Burn/Data/Phenos/Full_Tables/"
-PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,sep="" )
+PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,"_LME/",sep="" )
 
 ## Previously Compiled Data
 TAB.l <- read.table( PathToData, sep="\t",header=T )
 FUL <- read.table( paste(PathToFT,"20141229_Full_Table.txt",sep=""),sep="\t",header=T)
-TAB.2 <- merge( TAB.l, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
+TAB.pc <- merge( TAB.l, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
 # Get unique Weeks for plotting purposes
 WKS <- unique( TAB.l$WK )
 
@@ -41,8 +43,352 @@ RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw
 
 ## Take out Patients who left before getting DRUG
 RM.exit.id <- as.character( FUL$ID_2[which(FUL$IN<=4)] )
-RM.exit <- which( TAB$IID %in% RM.exit.id )
+RM.exit <- which( TAB.l$IID %in% RM.exit.id )
 TAB <- TAB.l[-RM.exit,c(1:15,17)]
+
+## Remove DAS values that are NA
+RM.na <- which(is.na( TAB$DAS ))
+if (length(RM.na) > 0 ) { TAB <- TAB[-RM.na, ] }
+
+##############################################################
+## CREATE PLOTTING FUNCTIONS #################################
+##############################################################
+
+PLOT_MODS <- function( MODELS ) {
+	N.mod <- length(MODELS)
+	Names.mod <- names(MODELS)
+	Nums.mod <- gsub("[^0-9]", "",Names.mod)
+	Swhich <- which(!duplicated(Nums.mod))
+	COMP <- array( ,c(4,N.mod))
+	rownames(COMP) <- c("logLik","AIC","BIC","SD")
+	colnames(COMP) <- Names.mod
+	for ( i in 1:N.mod ) {
+		COMP["logLik",] <- unlist(lapply( MODELS, logLik ))
+		COMP["AIC",] <- unlist(lapply( MODELS, AIC ))
+		COMP["BIC",] <- unlist(lapply( MODELS, BIC ))
+		COMP["SD",] <- unlist(lapply( MODELS, function(x) sd(resid(x)) ))
+	}
+	## Plot
+	COLS <- c("dodgerblue2","tomato2","slateblue3","chartreuse2")
+	png( paste(PathToPlot,"1-LME_ModAssess.png",sep="/"), height=800,width=2400,pointsize=30 )
+	par(mfrow=c(1,3))
+	 # logLik
+	plot( 1:N.mod, COMP["logLik",], type="o", col=COLS[1], pch=20, main="log(Likelihood) of Models",ylab="log(Lik)",xlab="Model",xaxt="n" )
+	axis( 1, at=1:N.mod, label=colnames(COMP), las=2 )
+	abline( v=which.max(COMP["logLik",]),lty=2,col=COLS[1],lwd=2 )
+	abline( v=Swhich-.5,lty=1,col="grey50",lwd=1 )
+	 # AIC/BIC
+	YLIM <- range( COMP[c("AIC","BIC"),] )
+	plot( 1:N.mod, COMP["AIC",], type="o", ylim=YLIM, col=COLS[2], pch=20, main="Information Criteria of Models",ylab="Information Criteria",xlab="Model",xaxt="n" )
+	points( 1:N.mod, COMP["BIC",], type="o", col=COLS[3], pch=20 )
+	axis( 1, at=1:N.mod, label=colnames(COMP), las=2 )
+	abline( v=which.min(COMP["AIC",]),lty=2,col=COLS[2],lwd=2 )
+	abline( v=which.min(COMP["BIC",]),lty=2,col=COLS[3],lwd=2 )
+	abline( v=Swhich-.5,lty=1,col="grey50",lwd=1 )
+	 # SD Res
+	plot( 1:N.mod, COMP["SD",], type="o", col=COLS[4], pch=20, main="SD of Residuals of Models",ylab="SD Resids",xlab="Model",xaxt="n" )
+	axis( 1, at=1:N.mod, label=colnames(COMP), las=2 )
+	abline( v=which.min(COMP["SD",]),lty=2,col=COLS[4],lwd=2 )
+	abline( v=Swhich-.5,lty=1,col="grey50",lwd=1 )
+	dev.off()
+	## Return Stats
+	return(COMP)
+}
+# TEMP <- PLOT_MODS(LME)
+
+HEAT_MODS <- function( MODELS ) {
+
+	N.mod <- length(MODELS)
+	Names.mod <- names(MODELS)
+	Nums.mod <- gsub("[^0-9]", "",Names.mod)
+	Swhich <- which(!duplicated(Nums.mod))
+
+	## Specify Number and Names of Models
+	MODELS.N.models <- length(MODELS)
+	MODELS.Names.models <- names(MODELS)
+
+	## Determine which models have DRUG interactions
+	MODELS.drugint <- as.numeric(unlist( lapply( MODELS, function(x) any(grepl( "DRUG:|:DRUG", names(coef(x)) ))) ))
+
+	################################################
+	## Compile Terms and Significance for each model
+
+	## Get all Terms used in any model
+	MODELS.terms <- Reduce( union, lapply( MODELS, function(x) colnames(coef(x)) ) )
+	# MODELS.terms <- sort( MODELS.terms )
+	MODELS.N.terms <- length(MODELS.terms)
+
+	## Determine which Terms are in each model
+	MODELS.ARR.terms <- array( 0, c(MODELS.N.terms,MODELS.N.models) )
+	MODELS.ARR.terms.p <- array( 1, c(MODELS.N.terms,MODELS.N.models) )
+	colnames(MODELS.ARR.terms) <- colnames(MODELS.ARR.terms.p) <- MODELS.Names.models
+	rownames(MODELS.ARR.terms) <- rownames(MODELS.ARR.terms.p) <- MODELS.terms
+	for ( m in 1:length(MODELS) ) {
+		mod <- names(MODELS)[m]
+		which.in <- which( MODELS.terms %in% colnames(coef(MODELS[[mod]])) )
+		which.terms <- MODELS.terms[which.in]
+		MODELS.ARR.terms[which.in,mod] <- 1
+		which.terms.2 <- which.terms[ which( which.terms %in% rownames(summary(MODELS[[mod]])$tTable) ) ]
+		which.in.2 <- which( MODELS.terms %in% which.terms.2 )
+		MODELS.ARR.terms.p[which.in.2,mod] <- summary(MODELS[[mod]])$tTable[which.terms.2,"p-value"]
+	}
+	 # Plot P-Values for each Term
+	COLS.list <- c("firebrick1","chocolate1","gold1","springgreen2","steelblue2","slateblue3","black")
+	COLS <- c( "firebrick1",colorRampPalette(COLS.list[3:7])(19) ) # colorRampPalette(COLS.list)(20)
+	ROW.COLS <- rep("deepskyblue2",MODELS.N.terms) ; ROW.COLS[grep("DRUG",MODELS.terms)] <- "chartreuse2"
+	png( paste(PathToPlot,"1-LME_ModBuild.png",sep="/"), height=1200,width=1600,pointsize=30 )
+	heatmap.2( MODELS.ARR.terms.p, main="Inclusion/Significance of Terms in Models",xlab="Model",ylab="Term",trace="none",scale="none",Colv=F,Rowv=F,dendrogram="none",col=COLS,margin=c(6,11),lhei=c(2,9),lwid=c(1,6),RowSideColors=ROW.COLS, colsep=Swhich-1 )
+	dev.off()
+	## Return P-Vals
+	return( MODELS.ARR.terms.p )
+}
+
+##############################################################
+## LMM MODELS ################################################
+##############################################################
+
+## When using ANOVA to compare models:
+ # Greater (less negative) logLik is better model
+ # Smaller (less positive) AIC/BIC is better model
+
+LME_MOD <- function( TAB ) {
+	start_time <- proc.time()
+	LME <- list()
+
+	## Put together some Basic Models
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 1"))
+	# Linear Mixed Model w/ only DRUG effect
+	LME$M1a <- lme( fixed = DAS ~ DRUG, random = ~ 1 | IID, data=TAB )
+	# Add Drug as Random Effect
+	LME$M1b <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID, data=TAB )
+	# Add Nested Random Effect DRUG %in% IID (IID/DRUG)
+	LME$M1c <- lme( fixed = DAS ~ DRUG, random = ~ 1 | IID/DRUG, data=TAB )
+	# Try removing Random Effects for Intercept
+	LME$M1d <- lme( fixed = DAS ~ DRUG, random = ~ DRUG-1 | IID, data=TAB )
+	# Use Nested Random Effect IID %in% COUN (COUN/IID)
+	LME$M1e <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | COUN/IID, data=TAB )
+	# Add Nested Random Effect DRUG %in% IID (IID/DRUG)
+	LME$M1f <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID/DRUG, data=TAB )
+	 # Choose Amongst Models
+	anova(LME$M1a,LME$M1b,LME$M1c,LME$M1d,LME$M1e,LME$M1f)
+	COMP <- PLOT_MODS( LME )
+
+	## Include some Auto-correlation within Patient
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 2"))
+	LME$M2a <- lme( fixed = DAS ~ DRUG, random = ~ 1 | IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID) )
+	LME$M2b <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID) )
+	LME$M2c <- lme( fixed = DAS ~ DRUG, random = ~ 1 | IID/DRUG, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID/DRUG) )
+	LME$M2d <- lme( fixed = DAS ~ DRUG, random = ~ DRUG-1 | IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID) )
+	LME$M2e <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | COUN/IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | COUN/IID) )
+	# LME$M2f <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID/DRUG, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID/DRUG) )
+	 # Choose Amongst Models
+	anova(LME$M2a,LME$M2b,LME$M2c,LME$M2d,LME$M2e)
+	COMP <- PLOT_MODS( LME )
+
+	## Include DRUG*WK Interaction as Fixed Effect
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 3"))
+	LME$M3a <- lme( fixed = DAS ~ DRUG*WK, random = ~ 1 | IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID) )
+	LME$M3b <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID) )
+	LME$M3c <- lme( fixed = DAS ~ DRUG*WK, random = ~ 1 | IID/DRUG, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID/DRUG) )
+	LME$M3d <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG-1 | IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID) )
+	LME$M3e <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | COUN/IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | COUN/IID) )
+	LME$M3f <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | IID/DRUG, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID/DRUG) )
+	 # Choose Amongst Models
+	anova(LME$M3a,LME$M3b,LME$M3c,LME$M3d,LME$M3e,LME$M3f)
+	COMP <- PLOT_MODS( LME )
+	HEAT <- HEAT_MODS( LME )
+
+	## Include Auto-correlation for WK within Patient
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 4"))
+	LME$M4a <- lme( fixed = DAS ~ DRUG*WK, random = ~ 1 | IID, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID) )
+	LME$M4b <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | IID, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID) )
+	LME$M4c <- lme( fixed = DAS ~ DRUG*WK, random = ~ 1 | IID/DRUG, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID/DRUG) )
+	LME$M4d <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG-1 | IID, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID) )
+	LME$M4e <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | COUN/IID, data=TAB, correlation=corCAR1(value = .8, form = ~WK | COUN/IID) )
+	LME$M4f <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG | IID/DRUG, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID/DRUG) )
+	 # Choose Amongst Models
+	anova(LME$M4a,LME$M4b,LME$M4c,LME$M4d,LME$M4e,LME$M4f)
+	COMP <- PLOT_MODS( LME )
+	HEAT <- HEAT_MODS( LME )
+
+	## Revert to Order only in Correlation
+	 # (Include WK in Random Effects)
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 5"))
+	LME$M5a <- lme( fixed = DAS ~ DRUG*WK, random = ~ WK | IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID) )
+	LME$M5b <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID) )
+	LME$M5c <- lme( fixed = DAS ~ DRUG*WK, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID/DRUG) )
+	LME$M5e <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | COUN/IID) )
+	# LME$M5f <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | IID/DRUG, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID/DRUG) )
+	 # Choose Amongst Models
+	anova(LME$M5a,LME$M5b,LME$M5c,LME$M5e,LME$M5f)
+	COMP <- PLOT_MODS( LME )
+	HEAT <- HEAT_MODS( LME )
+
+	## Test WK in Correlation again
+	 # (Keep WK in Random Effects)
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 6"))
+	LME$M6a <- lme( fixed = DAS ~ DRUG*WK, random = ~ WK | IID, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID) )
+	LME$M6b <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID) )
+	LME$M6c <- lme( fixed = DAS ~ DRUG*WK, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID/DRUG) )
+	LME$M6e <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(value = .8, form = ~WK | COUN/IID) )
+	# LME$M6f <- lme( fixed = DAS ~ DRUG*WK, random = ~ DRUG+WK | IID/DRUG, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID/DRUG) )
+	 # Choose Amongst Models
+	anova(LME$Ms6a,LME$M6b,LME$M6c,LME$M6e,LME$M6f)
+	COMP <- PLOT_MODS( LME )
+	HEAT <- HEAT_MODS( LME )
+
+	## Revert to Order only in Correlation
+	 # (Include Fixed PLAC Effect)
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 7"))
+	LME$M7a <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ WK | IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID) )
+	LME$M7b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID) )
+	# LME$M7c <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID/DRUG) )
+	LME$M7e <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(value = .5, form = ~1 | COUN/IID) )
+	# LME$M7f <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID/DRUG, data=TAB, correlation=corCAR1(value = .5, form = ~1 | IID/DRUG) )
+	 # Choose Amongst Models
+	anova(LME$M7a,LME$M7b,LME$M7c,LME$M7e,LME$M7f)
+	COMP <- PLOT_MODS( LME )
+	HEAT <- HEAT_MODS( LME )
+
+	## Test WK in Correlation again
+	 # (Keep Fixed PLAC Effect)
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 8"))
+	LME$M8a <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ WK | IID, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID) )
+	LME$M8b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID) )
+	LME$M8c <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID/DRUG) )
+	LME$M8e <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(value = .8, form = ~WK | COUN/IID) )
+	# LME$M8f <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID/DRUG, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID/DRUG) )
+	 # Choose Amongst Models
+	anova(LME$M8a,LME$M8b,LME$M8c,LME$M8e,LME$M8f)
+	COMP <- PLOT_MODS( LME )
+	HEAT <- HEAT_MODS( LME )
+
+	## Switch to ARMA Correlation Structure
+	 # Q = How many adjacent positions (pos vector) are used in Moving Average Correlation
+	 # P = How many adjacent positions (pos vector) are used in Autoregression Correlation
+	 # e.g., Moving Average w/ 2 adjacent positions: Q=2, P=0
+	 # e.g., Autoregression w/ 3 adjacent positions: Q=0, P=3
+	 # e.g., Hybrid using 3 for Moving Average & 2 for Autoregression: Q=3, P=2
+
+	## Revert to Order only in Correlation
+	 # (Keep Fixed PLAC Effect)
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 9"))
+	Q <- 2 ; P <- 0 
+	LME$M9a <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ WK | IID, data=TAB, correlation=corARMA(value = c(seq(.5,.1,length.out=Q),seq(.5,.1,length.out=P)), q=Q,p=P, form = ~WK | IID) )
+	LME$M9b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corARMA(value = c(seq(.5,.1,length.out=Q),seq(.5,.1,length.out=P)), q=Q,p=P, form = ~1 | IID) )
+	LME$M9c <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ WK | IID/DRUG, data=TAB, correlation=corARMA(value = c(seq(.5,.1,length.out=Q),seq(.5,.1,length.out=P)), q=Q,p=P, form = ~WK | IID/DRUG) )
+	LME$M9e <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corARMA(value = c(seq(.5,.1,length.out=Q),seq(.5,.1,length.out=P)), q=Q,p=P, form = ~1 | COUN/IID) )
+	LME$M9f <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID/DRUG, data=TAB, correlation=corARMA(value = c(seq(.5,.1,length.out=Q),seq(.5,.1,length.out=P)), q=Q,p=P, form = ~1 | IID/DRUG) )
+	 # Choose Amongst Models
+	anova(LME$M9b,LME$M9e,LME$M9f)
+	COMP <- PLOT_MODS( LME )
+	HEAT <- HEAT_MODS( LME )
+
+	## Test WK in Correlation again
+	 # (Keep Fixed PLAC Effect)
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 10"))
+	LME$M10b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(value = c(seq(.8,.1,length.out=Q),seq(.8,.1,length.out=P)), q=Q,p=P, form = ~WK | IID) )
+	LME$M10e <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(value = c(seq(.8,.1,length.out=Q),seq(.8,.1,length.out=P)), q=Q,p=P, form = ~WK | COUN/IID) )
+	LME$M10f <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG+WK | IID/DRUG, data=TAB, correlation=corCAR1(value = c(seq(.8,.1,length.out=Q),seq(.8,.1,length.out=P)), q=Q,p=P, form = ~WK | IID/DRUG) )
+	 # Choose Amongst Models
+	anova(LME$M10b,LME$M10e,LME$M10f)
+	COMP <- PLOT_MODS( LME )
+	HEAT <- HEAT_MODS( LME )
+
+
+
+
+
+
+
+	## Include Fixed PLAC Effect
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 7"))
+	LME$M7a <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ 1 | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	LME$M7b <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	LME$M7c <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ 1 | IID/DRUG, data=TAB, correlation=corCAR1(form = ~1 | IID/DRUG) )
+	LME$M7e <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	LME$M7f <- lme( fixed = DAS ~ DRUG*WK+PLAC, random = ~ DRUG | IID/DRUG, data=TAB, correlation=corCAR1(value = .8, form = ~WK | IID/DRUG) )
+	 # Choose Amongst Models
+	anova(LME$M7a,LME$M7b,LME$M7c,LME$M7e)
+	COMP <- PLOT_MODS( LME )
+
+	## Include Fixed RF_ACPA*DRUG Interaction
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 8"))
+	LME$M8b <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA)+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	# LME$M8c <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA)+PLAC, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(form = ~1 | IID/DRUG) )
+	LME$M8e <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA)+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	 # Choose Amongst Models
+	anova(LME$M8b,LME$M8e)
+	COMP <- PLOT_MODS( LME[6:length(LME)] )
+
+	## Try Fixed ACPA*DRUG Interaction Instead of RF_ACPA*DRUG
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 9"))
+	LME$M9b <- lme( fixed = DAS ~ DRUG*(WK+I(ACPA=="Positive"))+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	# LME$M9c <- lme( fixed = DAS ~ DRUG*(WK+I(ACPA=="Positive"))+PLAC, random = ~ WK | IID/DRUG, data=TAB, correlation=corCAR1(form = ~1 | IID/DRUG) )
+	LME$M9e <- lme( fixed = DAS ~ DRUG*(WK+I(ACPA=="Positive"))+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	 # Choose Amongst Models
+	anova(LME$M9b,LME$M9e)
+	COMP <- PLOT_MODS( LME[6:length(LME)] )
+
+	## Try Fixed RF*DRUG Interaction Instead of RF_ACPA*DRUG
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 10"))
+	LME$M10b <- lme( fixed = DAS ~ DRUG*(WK+RF)+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	LME$M10e <- lme( fixed = DAS ~ DRUG*(WK+RF)+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	 # Choose Amongst Models
+	anova(LME$M10b,LME$M10e)
+	COMP <- PLOT_MODS( LME[6:length(LME)] )
+
+	## Add SEX*DRUG Interaction
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 11"))
+	LME$M11b <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA+SEX)+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	LME$M11e <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA+SEX)+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	 # Choose Amongst Models
+	anova(LME$M11b,LME$M11e)
+	COMP <- PLOT_MODS( LME[6:length(LME)] )
+	HEAT <- HEAT_MODS( LME )
+
+	## Add BMI*DRUG Interaction
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 12"))
+	LME$M12b <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA+BMI)+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	LME$M12e <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA+BMI)+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	 # Choose Amongst Models
+	anova(LME$M12b,LME$M12e)
+	COMP <- PLOT_MODS( LME[6:length(LME)] )
+	HEAT <- HEAT_MODS( LME )
+
+	## Add AGE*DRUG Interaction
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 13"))
+	LME$M13b <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA+AGE)+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	LME$M13e <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA+AGE)+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	 # Choose Amongst Models
+	anova(LME$M13b,LME$M13e)
+	COMP <- PLOT_MODS( LME[6:length(LME)] )
+	HEAT <- HEAT_MODS( LME )
+
+	## Add DIS_DUR*DRUG Interaction
+	print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 14"))
+	LME$M14b <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA+DIS_DUR)+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	LME$M14e <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA+DIS_DUR)+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	 # Choose Amongst Models
+	anova(LME$M14b,LME$M14e)
+	COMP <- PLOT_MODS( LME[6:length(LME)] )
+	COMP <- PLOT_MODS( LME[25:length(LME)] )
+	HEAT <- HEAT_MODS( LME )
+
+	# ## Add DIS_DUR*DRUG Interaction
+	# print(paste(round(proc.time()-start_time,1)[3],"- Running Mod 15"))
+	# LME$M15b <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA+DIS_DUR)+PLAC, random = ~ DRUG+WK | IID, data=TAB, correlation=corCAR1(form = ~1 | IID) )
+	# LME$M15e <- lme( fixed = DAS ~ DRUG*(WK+RF_ACPA+DIS_DUR)+PLAC, random = ~ DRUG+WK | COUN/IID, data=TAB, correlation=corCAR1(form = ~1 | COUN/IID) )
+	#  # Choose Amongst Models
+	# anova(LME$M15b,LME$M15e)
+	# COMP <- PLOT_MODS( LME[6:length(LME)] )
+	# COMP <- PLOT_MODS( LME[25:length(LME)] )
+	# HEAT <- HEAT_MODS( LME )
+	return(LME)
+
+}
+LME <- LME_MOD(TAB)
+
 
 ##############################################################
 ## LMM MODELS ################################################
