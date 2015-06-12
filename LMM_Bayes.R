@@ -1,4 +1,5 @@
 ## Do Bayesian Analysis w/ Mixed Model & Longitudinal Data ##
+ # Use .../1997_Nof1_Trial_Analysis.pdf (Zucker, et al.) as Reference
 ## Janssen Data using Multiple-Measures ##
 ## May 22, 2015 ##
 ## Kristopher Standish ##
@@ -25,7 +26,7 @@ library(nlme)
 library(gplots)
 
 ## Set Date
-DATE <- "20150610"
+DATE <- "20150611"
 
 ## Mac Paths
 # PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150226_Resp_v_Time.txt"
@@ -34,12 +35,13 @@ DATE <- "20150610"
 PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150530_Resp_v_Time.txt"
 PathToRawFiles <- "/Users/kstandis/Data/Burn/Data/Phenos/Raw_Files/"
 PathToFT <- "/Users/kstandis/Data/Burn/Data/Phenos/Full_Tables/"
-PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,sep="" )
+PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,"_Long_Bayes/",sep="" )
+dir.create( PathToPlot )
 
 ## Previously Compiled Data
 TAB.l <- read.table( PathToData, sep="\t",header=T, stringsAsFactors=F )
 FUL <- read.table( paste(PathToFT,"20141229_Full_Table.txt",sep=""),sep="\t",header=T)
-TAB.2 <- merge( TAB.l, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
+TAB.PC <- merge( TAB.l, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
 # Get unique Weeks for plotting purposes
 WKS <- unique( TAB.l$WK )
 
@@ -72,171 +74,306 @@ TAB <- TAB[ which(!is.na(TAB$DAS)), ]
 dim(TAB)
 
 ##############################################################
-## LMM MODELS ################################################
+## FCT: MODEL, ANALYSE, PLOT #################################
 ##############################################################
-	## When using ANOVA to compare models:
-	 # Greater (less negative) logLik is better model
-	 # Smaller (less positive) AIC/BIC is better model
 
-## Mixed Effects Model
-LME.1 <- lme( fixed = DAS ~ DRUG, random = ~ 1 | IID, data=TAB )
-LME.2 <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID, data=TAB )
-LME.3 <- lme( fixed = DAS ~ DRUG, random = ~ DRUG - 1 | IID, data=TAB )
-LME.4 <- lme( fixed = DAS ~ DRUG - 1, random = ~ DRUG - 1 | IID, data=TAB )
- # Got with LME.2
-LME <- LME.2
+## Create Function to Build Models, Analyse, & Plot
+DO_IT <- function( TAB, file_tag ) {
 
-## Compile Stats for Bayesian Inference
- # mu(i) estimates
- # mu(0) estimate
- # tau estimate
- # sigma(i) estimates
-MU.0 <- fixef(LME)
-MU.i <- coef(LME)
-TAU <- as.numeric( VarCorr(LME)[1:2,"StdDev"] ) ; names(TAU) <- names(MU.0)
-# TAU <- intervals( LME, which="var-cov" )
-SIG.i <- aggregate( x=data.frame(resid(LME)), by=list(TAB$IID), sd )
-# SIG.i <- LME$sigma
+   ##############################################################
+   ## LMM MODELS ################################################
+   	## When using ANOVA to compare models:
+   	 # Greater (less negative) logLik is better model
+   	 # Smaller (less positive) AIC/BIC is better model
 
-POST <- merge( MU.i, SIG.i, by.x="row.names",by.y="Group.1", all=T )
-colnames(POST) <- c("ID","INT","PMD","PSD")
+   ## Mixed Effects Model
+   # LME.1 <- lme( fixed = DAS ~ DRUG, random = ~ 1 | IID, data=TAB )
+   LME.2 <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID, data=TAB )
+   # LME.3 <- lme( fixed = DAS ~ DRUG, random = ~ DRUG - 1 | IID, data=TAB )
+   # LME.4 <- lme( fixed = DAS ~ DRUG - 1, random = ~ DRUG - 1 | IID, data=TAB )
+    # Got with LME.2
+   LME <- LME.2
 
- # Plot Posterior Distributions for Individuals
-XX <- seq( -10,10,.05 )
-COLS.list <- c("black","slateblue2","steelblue2","springgreen2","gold1","chocolate2","firebrick2")
-COLS <- colorRampPalette(COLS.list)(nrow(POST))
-PROBS <- numeric( nrow(POST) )
-plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
-abline( v=0,lty=2,lwd=2 )
-N <- 20 ; WHICH <- sample(1:nrow(POST),N)
-for ( i in 1:nrow(POST) ) {
-# for ( w in 1:N ) {
-   # i <- WHICH[w]
-   points( XX, dnorm( XX,POST[i,"PMD"],POST[i,"PSD"]), type="l",col=COLS[i] )
-   PROBS[i] <- pnorm( 0, POST[i,"PMD"],POST[i,"PSD"], lower.tail=T )
-   text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS[i],2),col=COLS[i] )
+   ## Compile Stats for Bayesian Inference
+    # mu(i) estimates
+    # mu(0) estimate
+    # tau estimate
+    # sigma(i) estimates
+   MU.0 <- fixef(LME)
+   MU.i <- coef(LME)
+   TAU <- as.numeric( VarCorr(LME)[1:2,"StdDev"] ) ; names(TAU) <- names(MU.0)
+   # TAU <- intervals( LME, which="var-cov" )
+   SIG.i <- aggregate( x=data.frame(resid(LME)), by=list(TAB$IID), sd )
+   # SIG.i <- LME$sigma
+
+   POST <- merge( MU.i, SIG.i, by.x="row.names",by.y="Group.1", all=T )
+   colnames(POST) <- c("ID","INT","PMD","PSD")
+
+   #  # Plot Posterior Distributions for Individuals
+   # XX <- seq( -10,10,.05 )
+   # COLS.list <- c("black","slateblue2","steelblue2","springgreen2","gold1","chocolate2","firebrick2")
+   # COLS <- colorRampPalette(COLS.list)(nrow(POST))
+   # PROBS <- numeric( nrow(POST) )
+   # plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
+   # abline( v=0,lty=2,lwd=2 )
+   # N <- 20 ; WHICH <- sample(1:nrow(POST),N)
+   # for ( i in 1:nrow(POST) ) {
+   # # for ( w in 1:N ) {
+   #    # i <- WHICH[w]
+   #    points( XX, dnorm( XX,POST[i,"PMD"],POST[i,"PSD"]), type="l",col=COLS[i] )
+   #    PROBS[i] <- pnorm( 0, POST[i,"PMD"],POST[i,"PSD"], lower.tail=T )
+   #    text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS[i],2),col=COLS[i] )
+   # }
+
+   ##############################################################
+   ## LIS MODELS ################################################
+
+   ## Independent Linear Regression Models
+   LIS <- lmList( DAS ~ DRUG | IID, data=TAB )
+   LIS.I <- summary(LIS)$coefficients[,,"(Intercept)"]
+   LIS.D <- summary(LIS)$coefficients[,,"DRUG"]
+
+   ## Compile Stats for Bayesian Inference
+   MU.i.lis <- coef(LIS)
+   MU.0.lis <- colMeans( MU.i.lis )
+   # TAU <- as.numeric( VarCorr(LIS)[1:2,"StdDev"] ) ; names(TAU) <- names(MU.0)
+   SIG.i.lis <- aggregate( x=data.frame(resid(LIS)), by=list(TAB$IID), sd )
+
+   POST.lis <- merge( MU.i.lis, SIG.i.lis, by.x="row.names",by.y="Group.1", all=T )
+   colnames(POST.lis) <- c("ID","INT","PMD","PSD")
+
+   #  # Plot Posterior Distributions for Individuals
+   # XX <- seq( -10,10,.05 )
+   # COLS.list <- c("black","slateblue2","steelblue2","springgreen2","gold1","chocolate2","firebrick2")
+   # COLS <- colorRampPalette(COLS.list)(nrow(POST.lis))
+   # PROBS.lis <- numeric( nrow(POST.lis) )
+   # plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
+   # abline( v=0,lty=2,lwd=2 )
+   # N <- 20 ; WHICH <- sample(1:nrow(POST.lis),N)
+   # for ( i in 1:nrow(POST.lis) ) {
+   # # for ( w in 1:N ) {
+   #    # i <- WHICH[w]
+   #    points( XX, dnorm( XX,POST.lis[i,"PMD"],POST.lis[i,"PSD"]), type="l",col=COLS[i] )
+   #    PROBS.lis[i] <- pnorm( 0, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
+   #    text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS.lis[i],2),col=COLS[i] )
+   # }
+
+   ##############################################################
+   ## LM MODELS #################################################
+
+   ## Single Linear Regression
+   LM <- lm( DAS ~ DRUG, data=TAB )
+
+   ## Compile Stats for Bayesian Inference
+   MU.i.lm <- coef(LM)
+   # TAU <- as.numeric( VarCorr(LIS)[1:2,"StdDev"] ) ; names(TAU) <- names(MU.0)
+   # SIG.i.lm <- confint(LM)
+   SIG.i.lm <- summary(LM)$coefficients[,"Std. Error"]
+
+   POST.lm <- c( MU.i.lm, sqrt(SIG.i.lm) )
+   names(POST.lm) <- c("INT","PMD","INT_SD","PSD")
+
+   ## Set up for Plot
+   # COLS.lm <- COLS[3]
+   # PROBS.lm <- pnorm( 0, POST.lm["PMD"],POST.lm["PSD"], lower.tail=T )
+   # PLOT_LM <- function(PROBS.lm) {
+   #    # plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
+   #    # abline( v=0,lty=2,lwd=2 )
+   #    points( XX, dnorm( XX,POST.lm["PMD"],POST.lm["PSD"]), type="l",col=COLS.lm, lwd=2 )
+   #    arrows( POST.lm["PMD"],2,POST.lm["PMD"],1.75, col=COLS.lm,length=.1, lwd=2 )
+   #    # text( 3,2, label=round(PROBS.lm,2),col=COLS.lm )
+   # }
+
+
+
+   ##############################################################
+   ## PLOT MODELS ###############################################
+
+   png( paste(PathToPlot,"SHRINK_",file_tag,".png",sep=""), height=1000,width=2000, pointsize=30 )
+   par(mfrow=c(1,2))
+
+   ## Plot Shrinkage of Coefficients w/ Mixed Effects Model
+   COLS <- c("deepskyblue2","chocolate2","chartreuse3")
+   XLIM <- c(1,9) # range( MU.i[,1],MU.i.lis[,1] )
+   YLIM <- c(-5,3) # range( MU.i[,2],MU.i.lis[,2] )
+   plot( 0,0,type="n", xlim=XLIM,ylim=YLIM,xlab="Intercept",ylab="DRUG", main="Individual vs Mixed Effects Model Coefficients" )
+   arrows( MU.i.lis[,1], MU.i.lis[,2], MU.i[,1], MU.i[,2], col="grey50",length=.2, lwd=2*rowMeans(cbind(SIG.i.lis[,2],SIG.i[,2])) )
+   points( MU.i.lis[,1],MU.i.lis[,2], col=COLS[1], pch=20, cex=SIG.i.lis[,2] )
+   points( MU.i[,1],MU.i[,2], col=COLS[2], pch=20, cex=SIG.i[,2] )
+   abline( v=mean(MU.i.lis[,1]),col=COLS[1],lty=2,lwd=2 ) ; abline( h=mean(MU.i.lis[,2]),col=COLS[1],lty=2,lwd=2 )
+   abline( v=mean(MU.i[,1]),col=COLS[2],lty=2,lwd=1 ) ; abline( h=mean(MU.i[,2]),col=COLS[2],lty=2,lwd=1 )
+   points( MU.i.lm[1],MU.i.lm[2], pch=10,col=COLS[3],cex=2,lwd=2 )
+   legend( "bottomleft",legend=c("LIS","LME","LM","Hi_Var","Lo_Var"),col=c(COLS,"black","black"),pch=c(20,20,10,20,20),pt.cex=c(1,1,2,2,.5))
+
+   ## Plot Posterior Distributions for Individuals
+   COLS.list <- c("black","slateblue2","steelblue2","springgreen2","gold1","chocolate2","firebrick2")
+   N <- 0 ; WHICH <- sample(1:nrow(POST.lis),N)
+    # LIS
+   XX <- seq( -10,10,.05 )
+   COLS.lis.list <- c("black",COLS[1])
+   COLS.lis <- colorRampPalette(COLS.lis.list)(nrow(POST))
+   PROBS.lis <- numeric( nrow(POST.lis) )
+   # plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
+   # abline( v=0,lty=2,lwd=2 )
+   w <- 0
+   for ( i in 1:nrow(POST.lis) ) {
+      PROBS.lis[i] <- pnorm( 0, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
+      if ( i %in% WHICH ) { w <- w + 1
+         color <- COLS.lis[i]
+         points( XX, dnorm( XX,POST.lis[i,"PMD"],POST.lis[i,"PSD"]), type="l",col=COLS.lis[i] )
+         arrows( POST.lis[i,"PMD"],2,POST.lis[i,"PMD"],1.75, col=color,length=.1 )
+         text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS.lis[i],2),col=COLS.lis[i] )
+      }
+   }
+   # PLOT_LM( PROBS.lm )
+    # LME
+   COLS.lme.list <- c("black",COLS[2])
+   COLS.lme <- colorRampPalette(COLS.lme.list)(nrow(POST))
+   PROBS.lme <- numeric( nrow(POST) )
+   # plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
+   # abline( v=0,lty=2,lwd=2 )
+   w <- 0
+   for ( i in 1:nrow(POST) ) { color <- COLS.lme[i]
+      PROBS.lme[i] <- pnorm( 0, POST[i,"PMD"],POST[i,"PSD"], lower.tail=T )
+      if ( i %in% WHICH ) { w <- w + 1
+         points( XX, dnorm( XX,POST[i,"PMD"],POST[i,"PSD"]), type="l",col=color )
+         arrows( POST[i,"PMD"],2,POST[i,"PMD"],1.75, col=color,length=.1 )
+         text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS.lme[i],2),col=color )
+      }
+   }
+   # PLOT_LM( PROBS.lm )
+
+   ## Plot Probabilities for LME vs LIS
+   plot( PROBS.lis, PROBS.lme, xlim=c(0,1),ylim=c(0,1), col="firebrick1",pch=1,lwd=2,cex=rowMeans(cbind(SIG.i.lis[,2],SIG.i[,2])), main="Probability of Treatment Response",xlab="Individual Model",ylab="Mixed Effects Model" )
+   abline(0,1,lty=1,lwd=1) ; abline(h=seq(0,1,.2),lty=3,col="grey50",lwd=1) ; abline(v=seq(0,1,.2),lty=3,col="grey50",lwd=1)
+   abline(lm( PROBS.lme ~ PROBS.lis ), col="firebrick4",lwd=2,lty=2 )
+
+   dev.off() # Close png Output
+
+   # COLS <- c("deepskyblue2","chocolate2")
+   # boxplot( DAS ~ DRUG + IID, data=TAB, col=COLS,las=2 )
+   # MN.id.D0 <- aggregate( DAS ~ IID, data=TAB, subset=DRUG==0, mean )
+   # MN.id.D1 <- aggregate( DAS ~ IID, data=TAB, subset=DRUG==1, mean )
+   # hist( MN.id.D0[,2], xlim=c(1,9),ylim=c(0,30), density=20, angle=45, col=COLS[1] )
+   # hist( MN.id.D1[,2], xlim=c(1,9),ylim=c(0,30), density=20, angle=-45, col=COLS[2], add=T )
+
+   # summary(lm(DAS~DRUG*(WK+RF_ACPA),data=TAB))$coefficients
+   # summary(lme(DAS~DRUG*(WK+RF_ACPA),random=~DRUG|IID,data=TAB))$tTable
+   # summary(lme(DAS~DRUG*(WK+RF_ACPA),random=~DRUG+WK|IID,data=TAB))$tTable
+      
+   ## Calculate Shrinkage
+   SHRINK.int <- MU.i.lis[,1] - MU.i[,1]
+   SHRINK.drug <- MU.i.lis[,2] - MU.i[,2]
+
+   ## Output Compiled Results
+   COMPILE <- list( SHRINK.int, SHRINK.drug, PROBS.lme, PROBS.lis, POST, POST.lis )
+   names(COMPILE) <- c("SH.i","SH.d","PR.lme","PR.lis","POST.lme","POST.lis")
+   return(COMPILE)
+
+} # Close Function
+
+TEST <- DO_IT(TAB, "Full")
+
+##############################################################
+## OPTIONAL: DOWN SAMPLE TO ASSESS SHRINKAGE #################
+##############################################################
+ # Down sample to fraction of observations per person
+ # Output Amount of Shrinkage (Int & Drug) at each level of down-sampling
+Obs_per_Person <- table( TAB$IID )
+barplot( table( Obs_per_Person ))
+RM.exit.2.id <- names(Obs_per_Person)[which(Obs_per_Person<15)]
+RM.exit.2 <- which(TAB$IID %in% RM.exit.2.id)
+TAB.2 <- TAB[ -RM.exit.2, ] # Should be 120 patients, each with 15 measurements
+
+## Number of Observations to Down Sample to
+N.pats <- length(unique( TAB.2$IID ))
+N.rep <- 20
+N.obs <- c( 15, rep(12,N.rep), rep(9,N.rep), rep(6,N.rep), rep(3,N.rep) )
+SHRINK <- list()
+for ( o in 1:length(N.obs) ) {
+   obs <- N.obs[o]
+   tag <- paste( "It",o,"_",obs,"obs",sep="")
+   print(tag)
+   ## Down Sample Table
+   # which_wks <- sort(c( sample(1:5,obs/3),sample(6:10,obs/3),sample(11:15,obs/3) ))
+   # which_rows <- which_wks + rep( seq(0,nrow(TAB.2)-1,15), rep(obs,N.pats) )
+   # which_rows <- sample( 1:nrow(TAB.2), obs*N.pats )
+   which_rows <- sort(c(apply( matrix(1:nrow(TAB.2),byrow=T,ncol=15), 1, function(x) c(sample(x[1:5],obs/3),sample(x[6:10],obs/3),sample(x[11:15],obs/3)) )))
+   TEMP_TAB <- TAB.2[ which_rows, ]
+   SHRINK[[tag]] <- DO_IT(TEMP_TAB, tag )
 }
 
-##############################################################
-## LIS MODELS ################################################
-##############################################################
+## Compile Shrinkage Results
+SHRINK.int <- unlist(lapply( SHRINK, function(x) mean(abs(x$SH.i)) ))
+SHRINK.drug <- unlist(lapply( SHRINK, function(x) mean(abs(x$SH.d)) ))
+SHRINK.pyth <- sqrt( SHRINK.int^2 + SHRINK.drug^2 )
+COLS.box <- c("slateblue3","cadetblue2","tomato2")
+YLIM <- c(0,1)
+png( paste(PathToPlot,"SHRINK_2-Shrink_by_Nobs.png",sep=""), height=700,width=2100, pointsize=26 )
+par(mfrow=c(1,3))
+boxplot( SHRINK.int ~ factor(N.obs), ylim=YLIM,col=COLS.box[1], main="Intercept Coef Shrinkage",xlab="# Observations per Patient",ylab="Mean( Coef[LIS] - Coef[LME] )" )
+points( SHRINK.int ~ factor(N.obs), pch=20 )
+boxplot( SHRINK.drug ~ factor(N.obs), ylim=YLIM,col=COLS.box[2], main="Drug Coef Shrinkage",xlab="# Observations per Patient",ylab="Mean( Coef[LIS] - Coef[LME] )" )
+points( SHRINK.drug ~ factor(N.obs), pch=20 )
+boxplot( SHRINK.pyth ~ factor(N.obs), ylim=YLIM,col=COLS.box[3], main="Pythagorean Coef Shrinkage",xlab="# Observations per Patient",ylab="Mean( Coef[LIS] - Coef[LME] )" )
+points( SHRINK.pyth ~ factor(N.obs), pch=20 )
+dev.off()
 
-## Independent Linear Regression Models
-LIS <- lmList( DAS ~ DRUG | IID, data=TAB )
-LIS.I <- summary(LIS)$coefficients[,,"(Intercept)"]
-LIS.D <- summary(LIS)$coefficients[,,"DRUG"]
+## See if within Patient Variance correlates w/ size of Correction
+SD.lis <- lapply( SHRINK, function(x) x$POST.lis[,"PSD"] )
+SD.lme <- lapply( SHRINK, function(x) x$POST.lme[,"PSD"] )
+SHR.drug <- lapply( SHRINK, function(x) abs(x$SH.d) )
+SHR.int <- lapply( SHRINK, function(x) abs(x$SH.i) )
 
-## Compile Stats for Bayesian Inference
-MU.i.lis <- coef(LIS)
-MU.0.lis <- colMeans( MU.i.lis )
-# TAU <- as.numeric( VarCorr(LIS)[1:2,"StdDev"] ) ; names(TAU) <- names(MU.0)
-SIG.i.lis <- aggregate( x=data.frame(resid(LIS)), by=list(TAB$IID), sd )
+VARR <- data.frame( SD.lis=unlist(SD.lis), SD.lme=unlist(SD.lme), SHR.drug=unlist(SHR.drug), SHR.int=unlist(SHR.int) )
+VARR.obs <- as.numeric(sapply(strsplit( sapply(strsplit( rownames(VARR),"_" ),"[",2), "obs"),"[",1))
+VARR <- data.frame( VARR, OBS=VARR.obs )
+VARR <- data.frame( VARR, SD=(VARR$SD.lis+VARR$SD.lme)/2 )
+VARR <- data.frame( VARR, SHR.pyth=sqrt(VARR$SHR.drug^2+VARR$SHR.drug^2) )
+MOD.drug <- lm( SHR.drug ~ SD*factor(OBS), data=VARR )
+MOD.int <- lm( SHR.int ~ SD*factor(OBS), data=VARR )
+summary(MOD.drug) ; summary(MOD.int)
+COLS.list <- c("slateblue1","steelblue1","springgreen1","gold1","chocolate1","firebrick1")[c(1:3,5,6)]
+COLS.3.list <- c("slateblue3","steelblue3","springgreen3","gold3","chocolate3","firebrick3")[c(1:3,5,6)]
+ORDER <- sample( 1:nrow(VARR) )
+png( paste(PathToPlot,"SHRINK_3-Shrink_vs_Var.png",sep=""), height=800,width=2400, pointsize=30 )
+par(mfrow=c(1,3))
+ # Intercept
+plot( VARR$SHR.int[ORDER] ~ VARR$SD[ORDER], col=COLS.list[factor(VARR$OBS[ORDER])], main="Intercept Coef Shrinkage vs Variance",xlab="Within Patient Variance",ylab="Coef[LIS] - Coef[LME]", )
+abline(lm(SHR.int~SD,data=VARR,subset=OBS==3), col=COLS.3.list[1],lwd=2 )
+abline(lm(SHR.int~SD,data=VARR,subset=OBS==6), col=COLS.3.list[2],lwd=2 )
+abline(lm(SHR.int~SD,data=VARR,subset=OBS==9), col=COLS.3.list[3],lwd=2 )
+abline(lm(SHR.int~SD,data=VARR,subset=OBS==12), col=COLS.3.list[4],lwd=2 )
+abline(lm(SHR.int~SD,data=VARR,subset=OBS==15), col=COLS.3.list[5],lwd=2 )
+ # Drug
+plot( VARR$SHR.drug[ORDER] ~ VARR$SD[ORDER], col=COLS.list[factor(VARR$OBS[ORDER])], main="Drug Coef Shrinkage vs Variance",xlab="Within Patient Variance",ylab="Coef[LIS] - Coef[LME]", )
+abline(lm(SHR.drug~SD,data=VARR,subset=OBS==3), col=COLS.3.list[1],lwd=2 )
+abline(lm(SHR.drug~SD,data=VARR,subset=OBS==6), col=COLS.3.list[2],lwd=2 )
+abline(lm(SHR.drug~SD,data=VARR,subset=OBS==9), col=COLS.3.list[3],lwd=2 )
+abline(lm(SHR.drug~SD,data=VARR,subset=OBS==12), col=COLS.3.list[4],lwd=2 )
+abline(lm(SHR.drug~SD,data=VARR,subset=OBS==15), col=COLS.3.list[5],lwd=2 )
+ # Pyth
+plot( VARR$SHR.pyth[ORDER] ~ VARR$SD[ORDER], col=COLS.list[factor(VARR$OBS[ORDER])], main="Pyth Coef Shrinkage vs Variance",xlab="Within Patient Variance",ylab="Coef[LIS] - Coef[LME]", )
+abline(lm(SHR.pyth~SD,data=VARR,subset=OBS==3), col=COLS.3.list[1],lwd=2 )
+abline(lm(SHR.pyth~SD,data=VARR,subset=OBS==6), col=COLS.3.list[2],lwd=2 )
+abline(lm(SHR.pyth~SD,data=VARR,subset=OBS==9), col=COLS.3.list[3],lwd=2 )
+abline(lm(SHR.pyth~SD,data=VARR,subset=OBS==12), col=COLS.3.list[4],lwd=2 )
+abline(lm(SHR.pyth~SD,data=VARR,subset=OBS==15), col=COLS.3.list[5],lwd=2 )
+legend( "topleft", fill=COLS.list,legend=rev(unique(VARR$OBS)),title="# Obs/Patient" )
+dev.off()
 
-POST.lis <- merge( MU.i.lis, SIG.i.lis, by.x="row.names",by.y="Group.1", all=T )
-colnames(POST.lis) <- c("ID","INT","PMD","PSD")
-
- # Plot Posterior Distributions for Individuals
-XX <- seq( -10,10,.05 )
-COLS.list <- c("black","slateblue2","steelblue2","springgreen2","gold1","chocolate2","firebrick2")
-COLS <- colorRampPalette(COLS.list)(nrow(POST.lis))
-PROBS.lis <- numeric( nrow(POST.lis) )
-plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
-abline( v=0,lty=2,lwd=2 )
-N <- 20 ; WHICH <- sample(1:nrow(POST.lis),N)
-for ( i in 1:nrow(POST.lis) ) {
-# for ( w in 1:N ) {
-   # i <- WHICH[w]
-   points( XX, dnorm( XX,POST.lis[i,"PMD"],POST.lis[i,"PSD"]), type="l",col=COLS[i] )
-   PROBS.lis[i] <- pnorm( 0, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
-   text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS.lis[i],2),col=COLS[i] )
-}
-
-##############################################################
-## LM MODELS #################################################
-##############################################################
-
-## Single Linear Regression
-LM <- lm( DAS ~ DRUG, data=TAB )
-
-## Compile Stats for Bayesian Inference
-MU.i.lm <- coef(LM)
-# TAU <- as.numeric( VarCorr(LIS)[1:2,"StdDev"] ) ; names(TAU) <- names(MU.0)
-SIG.i.lm <- confint(LM)
-
-POST.lm <- merge( MU.i.lm, SIG.i.lm, by.x="row.names",by.y="Group.1", all=T )
-colnames(POST.lm) <- c("ID","INT","PMD","PSD")
-
- # Plot Posterior Distributions for Individuals
-XX <- seq( -10,10,.05 )
-COLS.lmt <- c("black","slateblue2","steelblue2","springgreen2","gold1","chocolate2","firebrick2")
-COLS <- colorRampPalette(COLS.lmt)(nrow(POST.lm))
-PROBS.lm <- numeric( nrow(POST.lm) )
-plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
-abline( v=0,lty=2,lwd=2 )
-N <- 20 ; WHICH <- sample(1:nrow(POST.lm),N)
-for ( i in 1:nrow(POST.lm) ) {
-# for ( w in 1:N ) {
-   # i <- WHICH[w]
-   points( XX, dnorm( XX,POST.lm[i,"PMD"],POST.lm[i,"PSD"]), type="l",col=COLS[i] )
-   PROBS.lm[i] <- pnorm( 0, POST.lm[i,"PMD"],POST.lm[i,"PSD"], lower.tail=T )
-   text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS.lm[i],2),col=COLS[i] )
-}
-
-
-
-##############################################################
-## COMPARE MODELS ############################################
-##############################################################
-
-
-
-
-
-
-
-
-COLS <- c("deepskyblue2","chocolate2","chartreuse3")
-XLIM <- range( MU.i[,1],MU.i.lis[,1] )
-YLIM <- range( MU.i[,2],MU.i.lis[,2] )
-plot( 0,0,type="n", xlim=XLIM,ylim=YLIM,xlab="Intercept",ylab="DRUG" )
-arrows( MU.i.lis[,1], MU.i.lis[,2], MU.i[,1], MU.i[,2], col="grey50",length=.1, lwd=rowMeans(cbind(SIG.i.lis[,2],SIG.i[,2])) )
-points( MU.i.lis[,1],MU.i.lis[,2], col=COLS[1], pch=20, cex=SIG.i.lis[,2] )
-points( MU.i[,1],MU.i[,2], col=COLS[2], pch=20, cex=SIG.i[,2] )
-abline( v=mean(MU.i.lis[,1]),col=COLS[1],lty=2,lwd=2 ) ; abline( h=mean(MU.i.lis[,2]),col=COLS[1],lty=2,lwd=2 )
-abline( v=mean(MU.i[,1]),col=COLS[2],lty=2,lwd=1 ) ; abline( h=mean(MU.i[,2]),col=COLS[2],lty=2,lwd=1 )
-points( MU.i.lm[1],MU.i.lm[2], pch=10,col=COLS[3],cex=2,lwd=2 )
-legend( "bottomleft",legend=c("LIS","LME","LM","Hi_Var","Lo_Var"),col=c(COLS,"black","black"),pch=c(20,20,10,20,20),pt.cex=c(1,1,2,2,.5))
-# hist( MU.i.lis[,1], freq=F,add=T, density=20, angle=45, col=COLS[1])
-# hist( MU.i[,1], freq=F,add=T, density=20, angle=-45, col=COLS[2])
-
-
-
-
-
-
-COLS <- c("deepskyblue2","chocolate2")
-boxplot( DAS ~ DRUG + IID, data=TAB, col=COLS,las=2 )
-MN.id.D0 <- aggregate( DAS ~ IID, data=TAB, subset=DRUG==0, mean )
-MN.id.D1 <- aggregate( DAS ~ IID, data=TAB, subset=DRUG==1, mean )
-hist( MN.id.D0[,2], xlim=c(1,9),ylim=c(0,30), density=20, angle=45, col=COLS[1] )
-hist( MN.id.D1[,2], xlim=c(1,9),ylim=c(0,30), density=20, angle=-45, col=COLS[2], add=T )
-
-
-
-summary(lm(DAS~DRUG*(WK+RF_ACPA),data=TAB))$coefficients
-summary(lme(DAS~DRUG*(WK+RF_ACPA),random=~DRUG|IID,data=TAB))$tTable
-summary(lme(DAS~DRUG*(WK+RF_ACPA),random=~DRUG+WK|IID,data=TAB))$tTable
-
-
-
-
-
-
-
-
+# o <- sample( 1:length(SHRINK), 1, prob=1:length(SHRINK) ) ; print(o)
+# plot( colMeans(rbind(SD.lis[[o]],SD.lme[[o]])), SHR.int[[o]], pch="+", col=COLS.box[1], main=names(SHRINK)[o] ) ; abline(lm( SHR.int[[o]]~colMeans(rbind(SD.lis[[o]],SD.lme[[o]])) ) ,lty=2,col=COLS.box[1] )
+# points( colMeans(rbind(SD.lis[[o]],SD.lme[[o]])), SHR.drug[[o]], col=COLS.box[2] ) ; abline(lm( SHR.drug[[o]]~colMeans(rbind(SD.lis[[o]],SD.lme[[o]])) ) ,lty=2,col=COLS.box[2] )
 
 # LIM.I <- range( MU.i[,1],MU.i.lis[,1] )
 # LIM.D <- range( MU.i[,2],MU.i.lis[,2] )
 # par(mfrow=c(1,2))
 # plot( MU.i.lis[,1], MU.i[,1], xlim=LIM.I, ylim=LIM.I, main="Intercept" ) ; abline(0,1)
 # plot( MU.i.lis[,2], MU.i[,2], xlim=LIM.D, ylim=LIM.D, main="Drug" ) ; abline(0,1)
+
+
+
+
+
+
