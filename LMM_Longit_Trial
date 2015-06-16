@@ -1,0 +1,521 @@
+## Simulate Clinical Trial by Staggering Start Time, then Assess Drug Efficacy over Time ##
+ # Do Longitudinal Analysis looking for Deviation from Baseline after Treatment ##
+ # Use .../2013_Longitud_Cancer.pdf (Drescher, et al.) as Reference
+## Janssen Data using Multiple-Measures ##
+## June 15, 2015 ##
+## Kristopher Standish ##
+
+## Rough Game Plan: Longitudinal Analysis as Template ##
+ # Calculate DRUG efficacy w/ all patients, Placebo efficacy w/ subset
+ # Simulate Start Dates for Patients (uniformly distributed over 100 weeks)
+   # Add "Absolute" week as variable (for tracking over time)
+ # Starting at week 0, calculate DRUG & PLAC effect size over time
+   # Calculate Effect Size for each Individual and Overall Effect
+## Specific Game Plan:
+ # Simulate Start Dates and Start Moving over Time
+ # Calculate Relevant Metrics for each Patient (in trial at absoluate time point)
+   # Calculate Mean Baseline and Post-Treatment Scores (per person)
+   # Calculate B Values
+   # Calculate Variance Metrics
+ # Calculate Z-Scores
+   # Using Modified Formula
+
+##############################################################
+## LOAD DATA #################################################
+##############################################################
+library(nlme)
+library(gplots)
+
+## Set Date
+DATE <- gsub("-","",Sys.Date())
+
+## Mac Paths
+# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150226_Resp_v_Time.txt"
+# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150506_Resp_v_Time.txt"
+# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150512_Resp_v_Time.txt"
+PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150530_Resp_v_Time.txt"
+PathToRawFiles <- "/Users/kstandis/Data/Burn/Data/Phenos/Raw_Files/"
+PathToFT <- "/Users/kstandis/Data/Burn/Data/Phenos/Full_Tables/"
+PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,"_LongTrial/",sep="" )
+dir.create( PathToPlot )
+
+## Previously Compiled Data
+TAB.l <- read.table( PathToData, sep="\t",header=T, stringsAsFactors=F )
+FUL <- read.table( paste(PathToFT,"20141229_Full_Table.txt",sep=""),sep="\t",header=T)
+TAB.2 <- merge( TAB.l, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
+# Get unique Weeks for plotting purposes
+WKS <- unique( TAB.l$WK )
+
+## Load Candidate Genotype Files
+COMP.l <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/CND_LT8_DEL_MNe_MN_DAS_BL_MN_PC1_PC2.compile.short", sep="\t",header=T)
+COMP <- COMP.l[ which(!duplicated(COMP.l$SNP)), ]
+RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw", sep="",header=T)
+
+##############################################################
+## FILTER DATA ###############################################
+##############################################################
+
+TAB <- TAB.l
+
+# ## Take out Patients who left before getting DRUG
+# RM.exit.id <- as.character( FUL$ID_2[which(FUL$IN<=4)] )
+# RM.exit <- which( TAB$IID %in% RM.exit.id )
+# TAB <- TAB[-RM.exit,c(1:15,17)]
+
+## Take out Patients from Golimumab Arm
+RM.gol.id <- as.character( FUL$ID_2[which(FUL$GRP=="G")] )
+RM.gol <- which( TAB$IID %in% RM.gol.id )
+TAB <- TAB[ -RM.gol, ]
+
+# ## Take out WK==0
+# TAB <- TAB[ which(TAB$WK!=0), ]
+
+## Remove NA Values for DAS
+TAB <- TAB[ which(!is.na(TAB$DAS)), ]
+dim(TAB)
+
+##############################################################
+## FCT: CALCULATE DRUG EFFECT AT GIVEN TIMEPOINT #############
+##############################################################
+
+## Create Function to Assess Drug Efficacy at given Timepoint
+BY_WK <- function( TAB.a, wk ) {
+	## Remove Measurements after "wk"
+	MEAS <- TAB.a[ which(TAB.a$WK.ab<=wk), ]
+	n.DRUG <- length(which(MEAS$DRUG==1))
+	n.PLAC <- length(which(MEAS$PLAC==1))
+	if ( n.DRUG>1 & n.PLAC>1 ) {
+		LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~DRUG+PLAC|IID ), silent=T)
+		if ( class(LME)=="try-error" ) {
+			print(paste( "P+D: Fail.1 -",wk ))
+			LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~DRUG|IID ), silent=T)
+		}
+		if ( class(LME)=="try-error" ) {
+			print(paste( "P+D: Fail.2 -",wk ))
+			LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~PLAC|IID ), silent=T)
+		}
+		if ( class(LME)=="try-error" ) {
+			print(paste( "P+D: Fail.3 -",wk ))
+			LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~1|IID ), silent=T)
+		}
+		if ( class(LME)=="try-error" ) { print(paste( "P+D: Fail.All -",wk )) }
+	}else{
+		if ( n.DRUG>1 ) {
+			LME <- try( lme( fixed= DAS ~ DRUG, data=MEAS, random= ~DRUG|IID ), silent=T)
+			if ( class(LME)=="try-error" ) {
+				print(paste( "D: Fail -",wk ))
+				LME <- lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~1|IID )	
+			}
+		}
+		if ( n.PLAC>1 ) {
+			LME <- try( lme( fixed= DAS ~ PLAC, data=MEAS, random= ~PLAC|IID ), silent=T)
+			if ( class(LME)=="try-error" ) {
+				print(paste( "P: Fail -",wk ))
+				LME <- lme( fixed= DAS ~ PLAC, data=MEAS, random= ~1|IID )	
+			}
+		}
+	}
+
+	## Compile Output Stats
+	if ( n.DRUG>1 | n.PLAC>1) {
+		COEF.0 <- summary(LME)$tTable
+		COEF.i <- coef(LME)
+		VAR.i <- LME$sigma
+		VAR.0 <- VarCorr(LME)
+		COMPILE <- list( COEF.0, COEF.i, VAR.i, VAR.0 )
+		names(COMPILE) <- c( "COEF.0","COEF.i","VAR.i","VAR.0")
+		return(COMPILE)		
+	}else{
+		return("No Model")
+	}
+}
+
+##############################################################
+## SIMULATE CLINICAL TRIAL ENROLLMENT ########################
+##############################################################
+
+## Get Number of Patients
+Samps <- as.character(unique( TAB$IID ))
+N.samps <- length(Samps)
+
+## Simulate Start Dates for Patients
+Enroll.countby <- 2
+Enroll.start <- 0
+Enroll.end <- 100
+Enroll.samps <- sample( seq(Enroll.start, Enroll.end, Enroll.countby), N.samps, replace=T )
+names(Enroll.samps) <- Samps
+
+## Add Absolute Week to Data Table
+TAB.a <- data.frame( TAB, WK.ab=0 )
+for ( s in 1:N.samps ) {
+	samp <- Samps[s]
+	TAB.a[ which(TAB.a$IID==samp), "WK.ab" ] <- TAB.a[ which(TAB.a$IID==samp), "WK" ] + Enroll.samps[s]
+} ; hist( TAB.a$WK.ab, breaks=seq(0,100+Enroll.end,Enroll.countby),col="dodgerblue2" )
+ # Get Range of Weeks
+WKS <- min(TAB.a$WK.ab):max(TAB.a$WK.ab)
+WKS <- seq( min(TAB.a$WK.ab), max(TAB.a$WK.ab), Enroll.countby )
+
+##############################################################
+## COMPILE DATA OVER COURSE OF TRIAL #########################
+##############################################################
+
+## Compile data over Trial
+OUT <- list()
+start_time <- proc.time()
+for ( w in 1:length(WKS) ) {
+# for ( w in seq(10,50,5) ) {
+# for ( w in 1:100 ) {
+	wk <- WKS[w]
+	tag <- paste("Wk",wk,sep="_")
+	OUT[[tag]] <- BY_WK( TAB.a, wk )
+	if ( wk%%10==0 ) { print(paste( "Done with",w,"of",length(WKS),"-",round(proc.time()-start_time,3)[3] )) }
+}
+if ( exists("OUT.save") ) { OUT.save[[length(OUT.save)+1]] <- OUT }else{ OUT.save <- list() ; OUT.save[[1]] <- OUT }
+
+##############################################################
+## PARSE TRIAL UPDATES OVER TIME #############################
+##############################################################
+
+## Which Models failed Entirely
+FAIL.which <- which(OUT=="No Model")
+if ( length(FAIL.which)>0 ) {
+	OUT.2 <- OUT[-FAIL.which]
+}else{ OUT.2 <- OUT }
+
+##########################
+## POPULATION STATS ######
+
+## Which Weeks have Valid PLAC/DRUG Estimates
+ # Fixed
+DRUG.which <- which( unlist(lapply( OUT.2, function(x) "DRUG"%in%rownames(x$COEF.0) )) )
+PLAC.which <- which( unlist(lapply( OUT.2, function(x) "PLAC"%in%rownames(x$COEF.0) )) )
+ # Random
+DRUG.r.which <- which( unlist(lapply( OUT.2, function(x) "DRUG"%in%rownames(x$VAR.0) )) )
+PLAC.r.which <- which( unlist(lapply( OUT.2, function(x) "PLAC"%in%rownames(x$VAR.0) )) )
+
+## Compile Population Estimates for each Week
+ARR.colnames <- c( "DRUG.f","PLAC.f","DRUG.r","PLAC.r","DRUG.f.se","PLAC.f.se" )
+ARR <- array( ,c(length(OUT.2),length(ARR.colnames)) ) ; colnames(ARR) <- ARR.colnames ; rownames(ARR) <- names(OUT.2)
+ARR[ DRUG.which, "DRUG.f" ] <- as.numeric( unlist(lapply( OUT.2[DRUG.which], function(x) x$COEF.0["DRUG","Value"] )) )
+ARR[ PLAC.which, "PLAC.f" ] <- as.numeric( unlist(lapply( OUT.2[PLAC.which], function(x) x$COEF.0["PLAC","Value"] )) )
+ARR[ DRUG.r.which, "DRUG.r" ] <- as.numeric( unlist(lapply( OUT.2[DRUG.r.which], function(x) x$VAR.0["DRUG","Variance"] )) )
+ARR[ PLAC.r.which, "PLAC.r" ] <- as.numeric( unlist(lapply( OUT.2[PLAC.r.which], function(x) x$VAR.0["PLAC","Variance"] )) )
+ARR[ DRUG.which, "DRUG.f.se" ] <- as.numeric( unlist(lapply( OUT.2[DRUG.which], function(x) x$COEF.0["DRUG","Std.Error"] )) )
+ARR[ PLAC.which, "PLAC.f.se" ] <- as.numeric( unlist(lapply( OUT.2[PLAC.which], function(x) x$COEF.0["PLAC","Std.Error"] )) )
+
+##########################
+## INDIVIDUAL STATS ######
+
+## Create Array w/ Samples by Week
+SAMP.i.which <- lapply( OUT.2, function(x) rownames(x$COEF.i) )
+
+## Compile Individual Estimates for each Week
+ # Set up Array
+IND.colnames <- c("DRUG","PLAC")
+IND.dimnames.3 <- names(OUT.2)
+IND <- array( ,c(N.samps,length(IND.colnames),length(IND.dimnames.3)) )
+rownames(IND) <- Samps ; colnames(IND) <- IND.colnames ; dimnames(IND)[[3]] <- IND.dimnames.3
+ # Fill Array w/ Numbers
+for ( w in 1:length(OUT.2) ) {
+	tag <- names(OUT.2)[w]
+	if ( w %in% DRUG.which) { IND[SAMP.i.which[[tag]],"DRUG",tag] <- OUT.2[[tag]]$COEF.i[SAMP.i.which[[tag]],"DRUG"] }
+	if ( w %in% PLAC.which) { IND[SAMP.i.which[[tag]],"PLAC",tag] <- OUT.2[[tag]]$COEF.i[SAMP.i.which[[tag]],"PLAC"] }
+}
+
+##############################################################
+## PLOT TRIAL UPDATES OVER TIME ##############################
+##############################################################
+
+## Plot Trial Enrollment Distribution over Time
+png( paste(PathToPlot,"0-Observation_Hist.png",sep=""), height=1200,width=1600,pointsize=24 )
+par(mfrow=c(2,1))
+ # Individual Patient Enrollment over Time
+XLIM <- range(WKS)
+YLIM <- c(0,N.samps)
+COLS.list <- c("slateblue1","steelblue1","springgreen1","gold1","chocolate1","firebrick1")
+COLS <- colorRampPalette(COLS.list)(N.samps)
+plot( 0,0,type="n",xlim=XLIM,ylim=YLIM, xlab="Weeks",ylab="Patient",main="Patient Enrollment over Time")
+for ( s in 1:N.samps ) {
+	samp.plot <- names(Enroll.samps)[order(Enroll.samps)][s]
+	which_rows <- which(TAB.a$IID==samp.plot)
+	points( TAB.a$WK.ab[which_rows], rep(s,length(which_rows)), col=COLS[s],type="o",pch=20,lwd=2 )
+}
+ # Time of Measurements
+# barplot( table(TAB.a$WK.ab), las=2,col="dodgerblue2" )
+hist( TAB.a$WK.ab, breaks=seq(0,100+Enroll.end,Enroll.countby),col="dodgerblue2" )
+dev.off()
+
+##########################
+## POPULATION STATS ######
+
+## Which Weeks yielded actual results?
+WKS.plot <- as.numeric( gsub("Wk_","",names(OUT.2)) )
+
+## Plot Polulation-Level Fixed Coefficients over Time (w/ Error)
+ # Parameters
+XLIM <- c( 0, max(WKS.plot) )
+YLIM <- range( ARR[,1]+ARR[,3], ARR[,2]+ARR[,4], ARR[,1]-ARR[,3], ARR[,2]-ARR[,4] ,na.rm=T) ; YLIM <- c( max(-4,YLIM[1]),min(2,YLIM[2]) )
+COLS.list <- c("slateblue1","steelblue1","springgreen1","gold1","chocolate1","firebrick1")
+COLS <- COLS.list[c(1,3)]
+COLS.pol <- sapply( COLS, function(x) colorRampPalette(c("white",x))(3)[2] )
+ # Create Plot
+png( paste(PathToPlot,"1-Population_Plot.png",sep=""), height=800,width=1600,pointsize=24 )
+plot( 0,0,type="n", xlim=XLIM,ylim=YLIM, xlab="Weeks",ylab="Effect Size Estimate",main="Effect Size Coefficient over Time" )
+abline( h=seq(-5,5,.5),lty=3,col="grey50",lwd=1 )
+abline( v=seq(0,XLIM[2]+10,10),lty=3,col="grey50",lwd=1 )
+ # Plot Data
+polygon( c(WKS.plot[DRUG.r.which],rev(WKS.plot[DRUG.r.which])), c(ARR[DRUG.r.which,"DRUG.f"]+ARR[DRUG.r.which,"DRUG.r"],ARR[rev(DRUG.r.which),"DRUG.f"]-ARR[rev(DRUG.r.which),"DRUG.r"]), col=COLS.pol[1],border=COLS[1],density=50,angle=-45 )
+polygon( c(WKS.plot[DRUG.which],rev(WKS.plot[DRUG.which])), c(ARR[DRUG.which,"DRUG.f"]+ARR[DRUG.which,"DRUG.f.se"],ARR[rev(DRUG.which),"DRUG.f"]-ARR[rev(DRUG.which),"DRUG.f.se"]), col=COLS.pol[1],border=COLS[1],density=80,angle=-45 )
+points( WKS.plot, ARR[,"DRUG.f"], type="l",col=COLS[1], lwd=3 )
+polygon( c(WKS.plot[PLAC.r.which],rev(WKS.plot[PLAC.r.which])), c(ARR[PLAC.r.which,"PLAC.f"]+ARR[PLAC.r.which,"PLAC.r"],ARR[rev(PLAC.r.which),"PLAC.f"]-ARR[rev(PLAC.r.which),"PLAC.r"]), col=COLS.pol[2],border=COLS[2],density=50,angle=45 )
+polygon( c(WKS.plot[PLAC.which],rev(WKS.plot[PLAC.which])), c(ARR[PLAC.which,"PLAC.f"]+ARR[PLAC.which,"PLAC.f.se"],ARR[rev(PLAC.which),"PLAC.f"]-ARR[rev(PLAC.which),"PLAC.f.se"]), col=COLS.pol[2],border=COLS[2],density=80,angle=45 )
+points( WKS.plot, ARR[,"PLAC.f"], type="l",col=COLS[2], lwd=3 )
+ # Legend
+legend( "bottomleft", fill=COLS, legend=c("DRUG","PLAC") )
+dev.off()
+
+##########################
+## INDIVIDUAL STATS ######
+
+## Plot Individual Coefficients over Time (w/ Error)
+ # Parameters
+N.samps.plot <- 5
+Samps.id.plot <- sample( Samps, N.samps.plot, replace=F )
+XLIM <- c( 0, max(WKS.plot) ) + c(0,20)
+YLIM <- range(IND,na.rm=T)
+YLIM <- range(ARR[,1:2],IND[Samps.id.plot,,],na.rm=T)
+COLS.list <- c("slateblue1","steelblue1","springgreen1","gold1","chocolate1","firebrick1")
+COLS.4.list <- c("slateblue1","steelblue1","springgreen1","gold1","chocolate1","firebrick1")
+COLS <- colorRampPalette(COLS.list)(N.samps.plot)
+COLS.4 <- colorRampPalette(COLS.4.list)(N.samps.plot)
+ # Create Plot
+png( paste(PathToPlot,"2-Indiv_Plot_",sample(1:100,1),".png",sep=""), height=800,width=1600,pointsize=24 )
+plot( 0,0,type="n", xlim=XLIM,ylim=YLIM, xlab="Weeks",ylab="Effect Size Estimate",main="Effect Size Coefficient over Time" )
+abline( h=seq(-10,10,.5),lty=3,col="grey50",lwd=1 )
+abline( v=seq(0,XLIM[2]+10,10),lty=3,col="grey50",lwd=1 )
+ # Population-Level Estimates
+points( WKS.plot, ARR[,"DRUG.f"], type="l",col="black", lwd=3,lty=1 )
+points( WKS.plot, ARR[,"PLAC.f"], type="l",col="black", lwd=3,lty=2 )
+ # Individual Data
+for ( s in 1:N.samps.plot ) {
+	samp.plot <- Samps.id.plot[s]
+	TEMP <- TAB.a[which(TAB.a$IID==samp.plot),]
+	 # Lines
+	points( WKS.plot, IND[samp.plot,"DRUG",], type="l",col=COLS[s],lty=1,lwd=2 )
+	points( WKS.plot, IND[samp.plot,"PLAC",], type="l",col=COLS[s],lty=2,lwd=2 )
+	 # Points (Measured)
+	TEMP.wks <- TEMP$WK.ab[ which(TEMP$WK.ab %in% WKS.plot) ]
+	points( TEMP.wks, IND[samp.plot,"DRUG",paste("Wk",TEMP.wks,sep="_")],col=COLS.4[s],pch=c(1,16)[factor(TEMP$DRUG)] )
+	points( TEMP.wks, IND[samp.plot,"PLAC",paste("Wk",TEMP.wks,sep="_")],col=COLS.4[s],pch=c(1,16)[factor(TEMP$DRUG)] )
+	 # Sample Names
+	text( 200, IND[samp.plot,"DRUG",dim(IND)[3]], label=samp.plot, col=COLS[s], pos=4 )
+}
+legend( "bottomleft",lty=c(2,1),pch=c(1,16),lwd=2,legend=c("PLAC","DRUG"), bg="white" )
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############################################################
+## FCT: CALCULATE Z-SCORES FOR EACH INDVIDUAL ################
+##############################################################
+# TAB <- NULL_TAB
+Z_SCORE <- function( TAB ) {
+	# TAB <- NULL_TAB
+
+	##############################################################
+	## CALCULATE POPULATION METRICS ##############################
+	## Calculate Relevant Metrics for each Patient
+	   # Calculate Mean Baseline and Post-Treatment Scores (per person)
+	   # Calculate B Values
+	   # Calculate Variance Metrics
+
+	## Calculate Population Mean Values
+	MN.0.P <- mean( TAB$DAS[ which(TAB$DRUG==0) ] )
+	MN.0.D <- mean( TAB$DAS[ which(TAB$DRUG==1) ] )
+	N.0.P <- length( which(TAB$DRUG==0) )
+	N.0.D <- length( which(TAB$DRUG==1) )
+
+	## Calculate Individual Mean/Variance Values
+	MN.i.P <- aggregate( DAS ~ IID, data=TAB, mean, subset=DRUG==0 )
+	# VAR.i.P <- aggregate( DAS ~ IID, data=TAB, var, subset=DRUG==0 ) ; VAR.i.P[which(is.na(VAR.i.P[,2])),2] <- 0
+	VAR.i.P <- var( TAB$DAS[which(TAB$DRUG==0)] )
+	MN.i.D <- aggregate( DAS ~ IID, data=TAB, mean, subset=DRUG==1 )
+	# VAR.i.D <- aggregate( DAS ~ IID, data=TAB, var, subset=DRUG==1 ) ; VAR.i.D[which(is.na(VAR.i.D[,2])),2] <- 0
+	VAR.i.D <- var( TAB$DAS[which(TAB$DRUG==1)] )
+
+	## Calculate Between Patient (Population) Variance
+	TAU.0.P <- var( MN.i.P[,2] )
+	TAU.0.D <- var( MN.i.D[,2] )
+
+	## Calculate # Observations & B Values for Individuals
+	N.i.P <- aggregate( DAS ~ IID, data=TAB, length, subset=DRUG==0 )
+	# B.i.P <- TAU.0.P / ( TAU.0.P + VAR.i.P[,2]/N.i.P[,2] )
+	B.i.P <- TAU.0.P / ( TAU.0.P + VAR.i.P/N.i.P[,2] )
+	N.i.D <- aggregate( DAS ~ IID, data=TAB, length, subset=DRUG==1 )
+	# B.i.D <- TAU.0.D / ( TAU.0.D + VAR.i.D[,2]/N.i.D[,2] )
+	B.i.D <- TAU.0.D / ( TAU.0.D + VAR.i.D/N.i.D[,2] )
+
+	# B.i.1.P <- TAU.0.P / ( TAU.0.P + VAR.i.P[,2] )
+	B.i.1.P <- TAU.0.P / ( TAU.0.P + VAR.i.P )
+	# B.i.1.D <- TAU.0.D / ( TAU.0.D + VAR.i.D[,2] )
+	B.i.1.D <- TAU.0.D / ( TAU.0.D + VAR.i.D )
+
+	# pairs( data.frame( B.i.P, B.i.1.P, B.i.1, B.i.1.D, B.i.D, B.i.1*(B.i.D+B.i.P)/2 ) )
+
+	##############################################################
+	## CALCULATE Z SCORES ########################################
+
+	## Numerator
+	NUM.i.D <- (1-B.i.D)*MN.0.D + B.i.D*MN.i.D[,2]
+	NUM.i.P <- (1-B.i.P)*MN.0.P + B.i.P*MN.i.P[,2]
+	NUM <- NUM.i.D - NUM.i.P
+	NUM.frame <- data.frame( NUM.i.D, NUM.i.P, NUM )
+
+	## Denominator
+	N.i.sum <- (N.i.P[,2]+N.i.D[,2])
+	TAU.0.wtd <- ( N.0.P*TAU.0.P + N.0.D*TAU.0.D ) / (N.0.P+N.0.D)
+	# VAR.i.wtd <- (N.i.P[,2]*VAR.i.P[,2]+N.i.D[,2]*VAR.i.D[,2]) / N.i.sum
+	VAR.i.wtd <- (N.i.P[,2]*VAR.i.P+N.i.D[,2]*VAR.i.D) / N.i.sum
+	# VAR.i.wtd.2 <- (N.i.P[,2]*VAR.i.P[,2]+N.i.D[,2]*VAR.i.D[,2]) / N.i.sum^2
+	V.i <- VAR.i.wtd + TAU.0.wtd
+	B.i.1 <- TAU.0.wtd / V.i
+	B.i.1.wtd <- (N.i.P[,2]*B.i.1.P+N.i.D[,2]*B.i.1.D) / N.i.sum
+	# B.i.1.2 <- TAU.0.wtd / ( VAR.i.wtd + TAU.0.wtd )
+	B.i.n.wtd <- (N.i.P[,2]*B.i.P+N.i.D[,2]*B.i.D) / N.i.sum
+	# B.i.n <- TAU.0.wtd / ( TAU.0.wtd + VAR.i.wtd/N.i.sum )
+	# B.i.n.2 <- ( N.i.sum*B.i.1 ) / ( N.i.sum*B.i.1 + (1-B.i.1) )
+	# DENOM <- sqrt( V.i * ( 1 - B.i.1 * B.i.n ) )
+	DENOM <- sqrt( V.i * ( 1 - B.i.1.wtd * B.i.n.wtd ) )
+	DENOM.2 <- sqrt( V.i * ( 1 - B.i.1 * (B.i.D+B.i.P)/2 ) )
+	DENOM.3 <- sqrt( V.i * ( 1 - B.i.1 * sqrt(B.i.D*B.i.P) ) )
+	# DENOM <- sqrt( V.i )
+	# DENOM <- sqrt( VAR.i.wtd )
+
+	## Z-Score
+	Z.i <- NUM / DENOM
+	Z.i.2 <- NUM / DENOM.2
+	Z.i.3 <- NUM / DENOM.3
+
+	## Histogram of Z-Scores
+	LIM <- range( Z.i )
+	XLIM <- c( floor(LIM[1]),ceiling(LIM[2]) )
+	BRKS <- seq( XLIM[1],XLIM[2], .25 )
+	COLS <- colorRampPalette(c("cadetblue2","aquamarine4"))(4)[3]
+	hist( Z.i, xlim=XLIM,breaks=BRKS, col=COLS,main="Z-Score Distribution",xlab="Patient Z-Scores" )
+	MN.Z <- mean(Z.i) ; SD.Z <- sd(Z.i)
+	SHAP.P <- shapiro.test(Z.i)$p.value
+	text( quantile(XLIM,.05),length(Z.i)/20, label=paste("Mean =",round(MN.Z,2)),pos=4 )
+	text( quantile(XLIM,.05),length(Z.i)/25, label=paste("SD =",round(SD.Z,2)),pos=4 )
+	text( quantile(XLIM,.05),length(Z.i)/35, label=paste("Shap.P =",round(SHAP.P,2)),pos=4 )
+
+	## Return Z Scores
+	return(Z.i)
+
+} # Close Z-Score Function
+TEST <- Z_SCORE(TAB[1:100,])
+
+
+##############################################################
+## CHECK VARIANCE OF Z-SCORES UNDER VARIOUS SCENARIOS ########
+##############################################################
+
+N.patients <- 1000
+N.measures <- 50
+MN.DAS <- mean(TAB$DAS) ; SD.DAS <- sd(TAB$DAS)
+NULL_TAU <- 2 ; NULL_VAR <- 1
+NULL_IDS <- rep(1:N.patients,rep(N.measures,N.patients))
+NULL_DRUG <- c(replicate( N.patients, sort(c(0,1,sample(0:1,N.measures-2,replace=T))) ))
+NULL_DAS <- c(replicate( N.patients, rnorm(N.measures,rnorm(1,MN.DAS,NULL_TAU),NULL_VAR) ))
+NULL_TAB <- data.frame( IID=NULL_IDS, DRUG=NULL_DRUG, DAS=NULL_DAS )
+NULL_TEST <- Z_SCORE(NULL_TAB)
+
+## Check
+N.patients <- 100
+CHECK_VAR <- function(N.patients) {
+	NULL_TEST <- list()
+	N.measures.list <- sort( rep(seq(5,50,5),5) )
+	for ( n in 1:length(N.measures.list) ) {
+		N.measures <- N.measures.list[n]
+		tag <- paste(N.measures,"meas",n,sep="_")
+		## Create Data
+		MN.DAS <- mean(TAB$DAS) ; SD.DAS <- sd(TAB$DAS)
+		NULL_TAU <- 2 ; NULL_VAR <- 1
+		NULL_IDS <- rep(1:N.patients,rep(N.measures,N.patients))
+		NULL_DRUG <- c(replicate( N.patients, sort(c(0,1,sample(0:1,N.measures-2,replace=T))) ))
+		NULL_DAS <- c(replicate( N.patients, rnorm(N.measures,rnorm(1,MN.DAS,NULL_TAU),NULL_VAR) ))
+		NULL_TAB <- data.frame( IID=NULL_IDS, DRUG=NULL_DRUG, DAS=NULL_DAS )
+		## Run Test to Get Distribution
+		NULL_TEST[[tag]] <- Z_SCORE(NULL_TAB)
+		if ( n%%10==0 ) { print(paste( "Done with",n,"of",length(N.measures.list) )) }
+	}
+	return(NULL_TEST)
+}
+NULL_TEST <- CHECK_VAR(N.patients) ; plot( N.measures.list, unlist(lapply( NULL_TEST_PATS[[p]], sd )) )
+
+
+## Collect Z-Score Distribution over different # of Measurements for Different Population Sizes
+NULL_TEST_PATS <- list()
+N.patients.list <- seq(20,200,20)
+for ( p in 1:length(N.patients.list) ) {
+	N.patients <- N.patients.list[p]
+	tag <- paste(N.patients,"pats",p,sep="_")
+	NULL_TEST_PATS[[tag]] <- CHECK_VAR(N.patients)
+}
+
+
+par(mfrow=c(2,5))
+COLS.list <- c("slateblue1","steelblue1","springgreen1","gold1","chocolate1","firebrick1")
+COLS <- colorRampPalette(COLS.list)(length(N.patients.list))
+plot( 0,0,type="n",xlim=c(0,50),ylim=c(0,.4) )
+for ( p in 1:length(N.patients.list) ) {
+	# par(ask=T)
+	points( N.measures.list, unlist(lapply( NULL_TEST_PATS[[p]], sd )), col=COLS[p] )
+}
+##### !!!!!!!!!!!! SD OF Z-SCORE DISTRIBUTION DEPENDS ON NUMBER OF MEASUREMENTS PER PERSON !!!!!!!!!! ######
+
+##############################################################
+## CALCULATE Z SCORES FOR INDIVIDUALS ########################
+##############################################################
+
+## Only Patients who were in Placebo Arm of Study to Begin
+Z.plac <- Z_SCORE(TAB)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############################################################
+## END OF DOC ################################################
+##############################################################

@@ -18,7 +18,6 @@
    # b/n Patient Variance (from Mixed Model)
    # w/i Patient Variance (from Mixed Model)
 
-
 ##############################################################
 ## LOAD DATA #################################################
 ##############################################################
@@ -26,7 +25,7 @@ library(nlme)
 library(gplots)
 
 ## Set Date
-DATE <- "20150611"
+DATE <- gsub("-","",Sys.Date())
 
 ## Mac Paths
 # PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150226_Resp_v_Time.txt"
@@ -91,7 +90,7 @@ DO_IT <- function( TAB, file_tag ) {
    LME.2 <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID, data=TAB )
    # LME.3 <- lme( fixed = DAS ~ DRUG, random = ~ DRUG - 1 | IID, data=TAB )
    # LME.4 <- lme( fixed = DAS ~ DRUG - 1, random = ~ DRUG - 1 | IID, data=TAB )
-    # Got with LME.2
+    # Go with LME.2
    LME <- LME.2
 
    ## Compile Stats for Bayesian Inference
@@ -99,31 +98,15 @@ DO_IT <- function( TAB, file_tag ) {
     # mu(0) estimate
     # tau estimate
     # sigma(i) estimates
-   MU.0 <- fixef(LME)
-   MU.i <- coef(LME)
-   TAU <- as.numeric( VarCorr(LME)[1:2,"StdDev"] ) ; names(TAU) <- names(MU.0)
+   MU.0.lme <- fixef(LME)
+   MU.i.lme <- coef(LME)
+   TAU.lme <- as.numeric( VarCorr(LME)[1:2,"StdDev"] ) ; names(TAU.lme) <- names(MU.0.lme)
    # TAU <- intervals( LME, which="var-cov" )
-   SIG.i <- aggregate( x=data.frame(resid(LME)), by=list(TAB$IID), sd )
+   SIG.i.lme <- aggregate( x=data.frame(resid(LME)), by=list(TAB$IID), sd )
    # SIG.i <- LME$sigma
 
-   POST <- merge( MU.i, SIG.i, by.x="row.names",by.y="Group.1", all=T )
-   colnames(POST) <- c("ID","INT","PMD","PSD")
-
-   #  # Plot Posterior Distributions for Individuals
-   # XX <- seq( -10,10,.05 )
-   # COLS.list <- c("black","slateblue2","steelblue2","springgreen2","gold1","chocolate2","firebrick2")
-   # COLS <- colorRampPalette(COLS.list)(nrow(POST))
-   # PROBS <- numeric( nrow(POST) )
-   # plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
-   # abline( v=0,lty=2,lwd=2 )
-   # N <- 20 ; WHICH <- sample(1:nrow(POST),N)
-   # for ( i in 1:nrow(POST) ) {
-   # # for ( w in 1:N ) {
-   #    # i <- WHICH[w]
-   #    points( XX, dnorm( XX,POST[i,"PMD"],POST[i,"PSD"]), type="l",col=COLS[i] )
-   #    PROBS[i] <- pnorm( 0, POST[i,"PMD"],POST[i,"PSD"], lower.tail=T )
-   #    text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS[i],2),col=COLS[i] )
-   # }
+   POST.lme <- merge( MU.i.lme, SIG.i.lme, by.x="row.names",by.y="Group.1", all=T )
+   colnames(POST.lme) <- c("ID","INT","PMD","PSD")
 
    ##############################################################
    ## LIS MODELS ################################################
@@ -136,55 +119,45 @@ DO_IT <- function( TAB, file_tag ) {
    ## Compile Stats for Bayesian Inference
    MU.i.lis <- coef(LIS)
    MU.0.lis <- colMeans( MU.i.lis )
-   # TAU <- as.numeric( VarCorr(LIS)[1:2,"StdDev"] ) ; names(TAU) <- names(MU.0)
-   SIG.i.lis <- aggregate( x=data.frame(resid(LIS)), by=list(TAB$IID), sd )
+   TAU.lis <- as.numeric( VarCorr(LIS)[1:2,"Variance"] ) # as.numeric( VarCorr(LIS)[1:2,"StdDev"] ) ; names(TAU.lis) <- names(MU.0)
+   # SIG.i.lis <- aggregate( x=data.frame(resid(LIS)), by=list(TAB$IID), sd )
+   SIG.i.lis <- cbind( LIS.I[,"Std. Error"], LIS.D[,"Std. Error"] ) ; colnames(SIG.i.lis) <- c("(Intercept)","DRUG")
 
-   POST.lis <- merge( MU.i.lis, SIG.i.lis, by.x="row.names",by.y="Group.1", all=T )
+   POST.lis <- merge( MU.i.lis, SIG.i.lis[,"DRUG"], by="row.names", all=T ) # ,by.y="Group.1"
    colnames(POST.lis) <- c("ID","INT","PMD","PSD")
 
-   #  # Plot Posterior Distributions for Individuals
-   # XX <- seq( -10,10,.05 )
-   # COLS.list <- c("black","slateblue2","steelblue2","springgreen2","gold1","chocolate2","firebrick2")
-   # COLS <- colorRampPalette(COLS.list)(nrow(POST.lis))
-   # PROBS.lis <- numeric( nrow(POST.lis) )
-   # plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
-   # abline( v=0,lty=2,lwd=2 )
-   # N <- 20 ; WHICH <- sample(1:nrow(POST.lis),N)
-   # for ( i in 1:nrow(POST.lis) ) {
-   # # for ( w in 1:N ) {
-   #    # i <- WHICH[w]
-   #    points( XX, dnorm( XX,POST.lis[i,"PMD"],POST.lis[i,"PSD"]), type="l",col=COLS[i] )
-   #    PROBS.lis[i] <- pnorm( 0, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
-   #    text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS.lis[i],2),col=COLS[i] )
-   # }
+   ##### MANUAL LIS MODE #####
+   MAN <- list()
+   for ( samp in unique(TAB$IID) ) { MAN[[samp]] <- lm( DAS ~ DRUG, data=TAB, subset=IID==samp ) }
+   MU.i.man <- matrix( unlist(lapply( MAN, coef )),byrow=T,ncol=2 ) ; rownames(MU.i.man) <- names(MAN) ; colnames(MU.i.man) <- colnames(MU.i.lme)
 
    ##############################################################
    ## LM MODELS #################################################
 
    ## Single Linear Regression
-   LM <- lm( DAS ~ DRUG, data=TAB )
+   LM <- lm( DAS ~ DRUG*IID, data=TAB )
 
    ## Compile Stats for Bayesian Inference
-   MU.i.lm <- coef(LM)
-   # TAU <- as.numeric( VarCorr(LIS)[1:2,"StdDev"] ) ; names(TAU) <- names(MU.0)
+   MU.i.lm <- coef(LM)[c("(Intercept)","DRUG")]
+   MU.i.lm <- rbind( MU.i.lm, t(MU.i.lm+t(cbind( coef(LM)[grep("^IID",names(coef(LM)))], coef(LM)[grep("DRUG:",names(coef(LM)))] ))) )
+   colnames(MU.i.lm) <- c("(Intercept)","DRUG") ; rownames(MU.i.lm) <- gsub("IID","",rownames(MU.i.lm)) ; rownames(MU.i.lm)[1] <- setdiff( rownames(MU.i.lis),rownames(MU.i.lm) )
+   TAU.lm <- apply( MU.i.lm, 2, var) ; names(TAU.lm) <- names(MU.0.lm)
    # SIG.i.lm <- confint(LM)
    SIG.i.lm <- summary(LM)$coefficients[,"Std. Error"]
+   SIG.0.lm <- summary(LM)$coefficients["DRUG","Std. Error"]
 
    POST.lm <- c( MU.i.lm, sqrt(SIG.i.lm) )
    names(POST.lm) <- c("INT","PMD","INT_SD","PSD")
 
-   ## Set up for Plot
-   # COLS.lm <- COLS[3]
-   # PROBS.lm <- pnorm( 0, POST.lm["PMD"],POST.lm["PSD"], lower.tail=T )
-   # PLOT_LM <- function(PROBS.lm) {
-   #    # plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
-   #    # abline( v=0,lty=2,lwd=2 )
-   #    points( XX, dnorm( XX,POST.lm["PMD"],POST.lm["PSD"]), type="l",col=COLS.lm, lwd=2 )
-   #    arrows( POST.lm["PMD"],2,POST.lm["PMD"],1.75, col=COLS.lm,length=.1, lwd=2 )
-   #    # text( 3,2, label=round(PROBS.lm,2),col=COLS.lm )
-   # }
-
-
+   ##############################################################
+   ## CALCULATE POSTERIOR PROBABILITIES #########################
+   PROBS.0.lis <- PROBS.0.lme <- PROBS.1.lis <- PROBS.1.lme <- numeric( nrow(POST.lis) )
+   for ( i in 1:nrow(POST.lis) ) {
+      PROBS.0.lme[i] <- pnorm( 0, POST.lme[i,"PMD"],POST.lme[i,"PSD"], lower.tail=T )
+      PROBS.1.lme[i] <- pnorm( -1, POST.lme[i,"PMD"],POST.lme[i,"PSD"], lower.tail=T )
+      PROBS.0.lis[i] <- pnorm( 0, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
+      PROBS.1.lis[i] <- pnorm( -1, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
+   }
 
    ##############################################################
    ## PLOT MODELS ###############################################
@@ -193,7 +166,7 @@ DO_IT <- function( TAB, file_tag ) {
    par(mfrow=c(1,2))
 
    ## Plot Shrinkage of Coefficients w/ Mixed Effects Model
-   COLS <- c("deepskyblue2","chocolate2","chartreuse3")
+   COLS <- c("deepskyblue2","chocolate2","slateblue3")
    XLIM <- c(1,9) # range( MU.i[,1],MU.i.lis[,1] )
    YLIM <- c(-5,3) # range( MU.i[,2],MU.i.lis[,2] )
    plot( 0,0,type="n", xlim=XLIM,ylim=YLIM,xlab="Intercept",ylab="DRUG", main="Individual vs Mixed Effects Model Coefficients" )
@@ -205,49 +178,16 @@ DO_IT <- function( TAB, file_tag ) {
    points( MU.i.lm[1],MU.i.lm[2], pch=10,col=COLS[3],cex=2,lwd=2 )
    legend( "bottomleft",legend=c("LIS","LME","LM","Hi_Var","Lo_Var"),col=c(COLS,"black","black"),pch=c(20,20,10,20,20),pt.cex=c(1,1,2,2,.5))
 
-   ## Plot Posterior Distributions for Individuals
-   COLS.list <- c("black","slateblue2","steelblue2","springgreen2","gold1","chocolate2","firebrick2")
-   N <- 0 ; WHICH <- sample(1:nrow(POST.lis),N)
-    # LIS
-   XX <- seq( -10,10,.05 )
-   COLS.lis.list <- c("black",COLS[1])
-   COLS.lis <- colorRampPalette(COLS.lis.list)(nrow(POST))
-   PROBS.lis <- numeric( nrow(POST.lis) )
-   # plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
-   # abline( v=0,lty=2,lwd=2 )
-   w <- 0
-   for ( i in 1:nrow(POST.lis) ) {
-      PROBS.lis[i] <- pnorm( 0, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
-      if ( i %in% WHICH ) { w <- w + 1
-         color <- COLS.lis[i]
-         points( XX, dnorm( XX,POST.lis[i,"PMD"],POST.lis[i,"PSD"]), type="l",col=COLS.lis[i] )
-         arrows( POST.lis[i,"PMD"],2,POST.lis[i,"PMD"],1.75, col=color,length=.1 )
-         text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS.lis[i],2),col=COLS.lis[i] )
-      }
-   }
-   # PLOT_LM( PROBS.lm )
-    # LME
-   COLS.lme.list <- c("black",COLS[2])
-   COLS.lme <- colorRampPalette(COLS.lme.list)(nrow(POST))
-   PROBS.lme <- numeric( nrow(POST) )
-   # plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
-   # abline( v=0,lty=2,lwd=2 )
-   w <- 0
-   for ( i in 1:nrow(POST) ) { color <- COLS.lme[i]
-      PROBS.lme[i] <- pnorm( 0, POST[i,"PMD"],POST[i,"PSD"], lower.tail=T )
-      if ( i %in% WHICH ) { w <- w + 1
-         points( XX, dnorm( XX,POST[i,"PMD"],POST[i,"PSD"]), type="l",col=color )
-         arrows( POST[i,"PMD"],2,POST[i,"PMD"],1.75, col=color,length=.1 )
-         text( 3,2-quantile(c(0,2),(w-1)/N), label=round(PROBS.lme[i],2),col=color )
-      }
-   }
-   # PLOT_LM( PROBS.lm )
-
    ## Plot Probabilities for LME vs LIS
-   plot( PROBS.lis, PROBS.lme, xlim=c(0,1),ylim=c(0,1), col="firebrick1",pch=1,lwd=2,cex=rowMeans(cbind(SIG.i.lis[,2],SIG.i[,2])), main="Probability of Treatment Response",xlab="Individual Model",ylab="Mixed Effects Model" )
+   plot( 0,0,type="n",xlim=c(0,1),ylim=c(0,1), main="Probability of Treatment Response",xlab="Individual Model",ylab="Mixed Effects Model" )
    abline(0,1,lty=1,lwd=1) ; abline(h=seq(0,1,.2),lty=3,col="grey50",lwd=1) ; abline(v=seq(0,1,.2),lty=3,col="grey50",lwd=1)
-   abline(lm( PROBS.lme ~ PROBS.lis ), col="firebrick4",lwd=2,lty=2 )
-
+    # Pr<0
+   points( PROBS.0.lis, PROBS.0.lme, col="firebrick1",pch=1,lwd=2,cex=rowMeans(cbind(SIG.i.lis[,2],SIG.i[,2])) )
+   abline(lm( PROBS.0.lme ~ PROBS.0.lis ), col="firebrick4",lwd=2,lty=2 )
+   # hist( PROBS.0.lis, freq=F,col="firebrick1",density=20,angle=45, add=T )
+   points( PROBS.1.lis, PROBS.1.lme, col="chartreuse1",pch=1,lwd=2,cex=rowMeans(cbind(SIG.i.lis[,2],SIG.i[,2])) )
+   abline(lm( PROBS.1.lme ~ PROBS.1.lis ), col="chartreuse4",lwd=2,lty=2 )
+   # hist( PROBS.1.lis, freq=F,col="chartreuse1",density=20,angle=-45, add=T )
    dev.off() # Close png Output
 
    # COLS <- c("deepskyblue2","chocolate2")
@@ -266,8 +206,8 @@ DO_IT <- function( TAB, file_tag ) {
    SHRINK.drug <- MU.i.lis[,2] - MU.i[,2]
 
    ## Output Compiled Results
-   COMPILE <- list( SHRINK.int, SHRINK.drug, PROBS.lme, PROBS.lis, POST, POST.lis )
-   names(COMPILE) <- c("SH.i","SH.d","PR.lme","PR.lis","POST.lme","POST.lis")
+   COMPILE <- list( SHRINK.int, SHRINK.drug, PROBS.0.lme, PROBS.0.lis, PROBS.1.lme, PROBS.1.lis, POST.lme, POST.lis )
+   names(COMPILE) <- c("SH.i","SH.d","PROBS.0.lme","PROBS.0.lis","PROBS.1.lme","PROBS.1.lis","POST.lme","POST.lis")
    return(COMPILE)
 
 } # Close Function
@@ -295,9 +235,6 @@ for ( o in 1:length(N.obs) ) {
    tag <- paste( "It",o,"_",obs,"obs",sep="")
    print(tag)
    ## Down Sample Table
-   # which_wks <- sort(c( sample(1:5,obs/3),sample(6:10,obs/3),sample(11:15,obs/3) ))
-   # which_rows <- which_wks + rep( seq(0,nrow(TAB.2)-1,15), rep(obs,N.pats) )
-   # which_rows <- sample( 1:nrow(TAB.2), obs*N.pats )
    which_rows <- sort(c(apply( matrix(1:nrow(TAB.2),byrow=T,ncol=15), 1, function(x) c(sample(x[1:5],obs/3),sample(x[6:10],obs/3),sample(x[11:15],obs/3)) )))
    TEMP_TAB <- TAB.2[ which_rows, ]
    SHRINK[[tag]] <- DO_IT(TEMP_TAB, tag )
@@ -361,6 +298,69 @@ abline(lm(SHR.pyth~SD,data=VARR,subset=OBS==12), col=COLS.3.list[4],lwd=2 )
 abline(lm(SHR.pyth~SD,data=VARR,subset=OBS==15), col=COLS.3.list[5],lwd=2 )
 legend( "topleft", fill=COLS.list,legend=rev(unique(VARR$OBS)),title="# Obs/Patient" )
 dev.off()
+
+##############################################################
+## PLOT POSTERIORS of FULL MODEL #############################
+##############################################################
+
+OUT <- DO_IT(TAB, "Full")
+POST.lis <- OUT$POST.lis
+POST.lme <- OUT$POST.lme
+# PROBS.lis <- OUT$PR.lis
+# PROBS.lme <- OUT$PR.lme
+
+## Plot Posterior Distributions for Individuals
+ # Parameters
+N <- 10 ; WHICH <- sample(1:nrow(POST.lis),N)
+XX <- seq( -10,10,.05 )
+COLS <- c("deepskyblue2","chocolate2","slateblue3")
+COLS.lis.list <- c("black",COLS[1])
+COLS.lis <- colorRampPalette(COLS.lis.list)(2+N)[1:N+2]
+COLS.lme.list <- c("black",COLS[2])
+COLS.lme <- colorRampPalette(COLS.lme.list)(2+N)[1:N+2]
+PROBS.0.lis <- PROBS.0.lme <- PROBS.1.lis <- PROBS.1.lme <- numeric( nrow(POST.lis) )
+ # Open Plot
+plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
+abline( v=c(0,-1),lty=2,lwd=2,col=c("firebrick1","chartreuse1") )
+abline( v=3.8 )
+text( 3, 2, label="Pr < 0",col="firebrick1" )
+text( 4.5, 2, label="Pr < -1",col="chartreuse1" )
+w <- 0
+for ( i in 1:nrow(POST.lis) ) {
+   PROBS.0.lme[i] <- pnorm( 0, POST.lme[i,"PMD"],POST.lme[i,"PSD"], lower.tail=T )
+   PROBS.1.lme[i] <- pnorm( -1, POST.lme[i,"PMD"],POST.lme[i,"PSD"], lower.tail=T )
+   PROBS.0.lis[i] <- pnorm( 0, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
+   PROBS.1.lis[i] <- pnorm( -1, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
+   if ( i %in% WHICH ) { w <- w + 1
+      # LIS
+      color <- COLS.lis[w]
+      points( XX, dnorm( XX,POST.lis[i,"PMD"],POST.lis[i,"PSD"]), type="l",col=color )
+      arrows( POST.lis[i,"PMD"],2,POST.lis[i,"PMD"],1.75, col=color,length=.1 )
+      text( 2.7,quantile(c(.2,1.8),(w)/N), label=round(PROBS.0.lis[i],2),col=color )
+      text( 4.2,quantile(c(.2,1.8),(w)/N), label=round(PROBS.1.lis[i],2),col=color )
+      # LME
+      color <- COLS.lme[w]
+      points( XX, dnorm( XX,POST.lme[i,"PMD"],POST.lme[i,"PSD"]), type="l",col=color )
+      arrows( POST.lme[i,"PMD"],2,POST.lme[i,"PMD"],1.85, col=color,length=.1 )
+      text( 3.3,quantile(c(.1,1.7),(w)/N), label=round(PROBS.0.lme[i],2),col=color )
+      text( 4.8,quantile(c(.1,1.7),(w)/N), label=round(PROBS.1.lme[i],2),col=color )
+   }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # o <- sample( 1:length(SHRINK), 1, prob=1:length(SHRINK) ) ; print(o)
 # plot( colMeans(rbind(SD.lis[[o]],SD.lme[[o]])), SHR.int[[o]], pch="+", col=COLS.box[1], main=names(SHRINK)[o] ) ; abline(lm( SHR.int[[o]]~colMeans(rbind(SD.lis[[o]],SD.lme[[o]])) ) ,lty=2,col=COLS.box[1] )
