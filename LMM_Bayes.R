@@ -119,7 +119,7 @@ DO_IT <- function( TAB, file_tag ) {
    ## Compile Stats for Bayesian Inference
    MU.i.lis <- coef(LIS)
    MU.0.lis <- colMeans( MU.i.lis )
-   TAU.lis <- as.numeric( VarCorr(LIS)[1:2,"Variance"] ) # as.numeric( VarCorr(LIS)[1:2,"StdDev"] ) ; names(TAU.lis) <- names(MU.0)
+   # TAU.lis <- as.numeric( VarCorr(LIS)[1:2,"Variance"] ) # as.numeric( VarCorr(LIS)[1:2,"StdDev"] ) ; names(TAU.lis) <- names(MU.0)
    # SIG.i.lis <- aggregate( x=data.frame(resid(LIS)), by=list(TAB$IID), sd )
    SIG.i.lis <- cbind( LIS.I[,"Std. Error"], LIS.D[,"Std. Error"] ) ; colnames(SIG.i.lis) <- c("(Intercept)","DRUG")
 
@@ -135,19 +135,28 @@ DO_IT <- function( TAB, file_tag ) {
    ## LM MODELS #################################################
 
    ## Single Linear Regression
-   LM <- lm( DAS ~ DRUG*IID, data=TAB )
+   LM <- lm( DAS ~ DRUG, data=TAB )
 
    ## Compile Stats for Bayesian Inference
-   MU.i.lm <- coef(LM)[c("(Intercept)","DRUG")]
-   MU.i.lm <- rbind( MU.i.lm, t(MU.i.lm+t(cbind( coef(LM)[grep("^IID",names(coef(LM)))], coef(LM)[grep("DRUG:",names(coef(LM)))] ))) )
-   colnames(MU.i.lm) <- c("(Intercept)","DRUG") ; rownames(MU.i.lm) <- gsub("IID","",rownames(MU.i.lm)) ; rownames(MU.i.lm)[1] <- setdiff( rownames(MU.i.lis),rownames(MU.i.lm) )
-   TAU.lm <- apply( MU.i.lm, 2, var) ; names(TAU.lm) <- names(MU.0.lm)
-   # SIG.i.lm <- confint(LM)
-   SIG.i.lm <- summary(LM)$coefficients[,"Std. Error"]
-   SIG.0.lm <- summary(LM)$coefficients["DRUG","Std. Error"]
+   MU.0.lm <- coef(LM)
+   SIG.0.lm <- summary(LM)$coefficients[,"Std. Error"]
 
-   POST.lm <- c( MU.i.lm, sqrt(SIG.i.lm) )
+   POST.lm <- c( MU.0.lm, sqrt(SIG.0.lm) )
    names(POST.lm) <- c("INT","PMD","INT_SD","PSD")
+
+   ##############################################################
+   ## LMI MODELS ################################################
+
+   ## Linear Regression w/ DRUG*IID Interaction
+   # LMI <- lm( DAS ~ DRUG*IID, data=TAB )
+
+   # MU.i.lmi <- coef(LMI)[c("(Intercept)","DRUG")]
+   # MU.i.lmi <- rbind( MU.i.lmi, t(MU.i.lmi+t(cbind( coef(LMI)[grep("^IID",names(coef(LMI)))], coef(LMI)[grep("DRUG:",names(coef(LMI)))] ))) )
+   # colnames(MU.i.lmi) <- c("(Intercept)","DRUG") ; rownames(MU.i.lmi) <- gsub("IID","",rownames(MU.i.lmi)) ; rownames(MU.i.lmi)[1] <- setdiff( rownames(MU.i.lis),rownames(MU.i.lmi) )
+   # TAU.lmi <- apply( MU.i.lmi, 2, var) ; # names(TAU.lmi) <- names(MU.0.lmi)
+   # # SIG.i.lmi <- confint(LMI)
+   # SIG.i.lmi <- summary(LMI)$coefficients[,"Std. Error"]
+   # SIG.0.lmi <- summary(LMI)$coefficients["DRUG","Std. Error"]
 
    ##############################################################
    ## CALCULATE POSTERIOR PROBABILITIES #########################
@@ -158,6 +167,8 @@ DO_IT <- function( TAB, file_tag ) {
       PROBS.0.lis[i] <- pnorm( 0, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
       PROBS.1.lis[i] <- pnorm( -1, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
    }
+   PROBS.0.lm <- pnorm( 0, POST.lm["PMD"],POST.lm["PSD"], lower.tail=T )
+   PROBS.1.lm <- pnorm( -1, POST.lm["PMD"],POST.lm["PSD"], lower.tail=T )
 
    ##############################################################
    ## PLOT MODELS ###############################################
@@ -167,25 +178,25 @@ DO_IT <- function( TAB, file_tag ) {
 
    ## Plot Shrinkage of Coefficients w/ Mixed Effects Model
    COLS <- c("deepskyblue2","chocolate2","slateblue3")
-   XLIM <- c(1,9) # range( MU.i[,1],MU.i.lis[,1] )
-   YLIM <- c(-5,3) # range( MU.i[,2],MU.i.lis[,2] )
+   XLIM <- c(1,9) # range( MU.i.lm[,1],MU.i.lis[,1] )
+   YLIM <- c(-5,3) # range( MU.i.lm[,2],MU.i.lis[,2] )
    plot( 0,0,type="n", xlim=XLIM,ylim=YLIM,xlab="Intercept",ylab="DRUG", main="Individual vs Mixed Effects Model Coefficients" )
-   arrows( MU.i.lis[,1], MU.i.lis[,2], MU.i[,1], MU.i[,2], col="grey50",length=.2, lwd=2*rowMeans(cbind(SIG.i.lis[,2],SIG.i[,2])) )
+   arrows( MU.i.lis[,1], MU.i.lis[,2], MU.i.lme[,1], MU.i.lme[,2], col="grey50",length=.2, lwd=2*rowMeans(cbind(SIG.i.lis[,2],SIG.i.lme[,2])) )
    points( MU.i.lis[,1],MU.i.lis[,2], col=COLS[1], pch=20, cex=SIG.i.lis[,2] )
-   points( MU.i[,1],MU.i[,2], col=COLS[2], pch=20, cex=SIG.i[,2] )
+   points( MU.i.lme[,1],MU.i.lme[,2], col=COLS[2], pch=20, cex=SIG.i.lme[,2] )
    abline( v=mean(MU.i.lis[,1]),col=COLS[1],lty=2,lwd=2 ) ; abline( h=mean(MU.i.lis[,2]),col=COLS[1],lty=2,lwd=2 )
-   abline( v=mean(MU.i[,1]),col=COLS[2],lty=2,lwd=1 ) ; abline( h=mean(MU.i[,2]),col=COLS[2],lty=2,lwd=1 )
-   points( MU.i.lm[1],MU.i.lm[2], pch=10,col=COLS[3],cex=2,lwd=2 )
+   abline( v=mean(MU.i.lme[,1]),col=COLS[2],lty=2,lwd=1 ) ; abline( h=mean(MU.i.lme[,2]),col=COLS[2],lty=2,lwd=1 )
+   points( MU.0.lm[1],MU.0.lm[2], pch=10,col=COLS[3],cex=2,lwd=2 )
    legend( "bottomleft",legend=c("LIS","LME","LM","Hi_Var","Lo_Var"),col=c(COLS,"black","black"),pch=c(20,20,10,20,20),pt.cex=c(1,1,2,2,.5))
 
    ## Plot Probabilities for LME vs LIS
    plot( 0,0,type="n",xlim=c(0,1),ylim=c(0,1), main="Probability of Treatment Response",xlab="Individual Model",ylab="Mixed Effects Model" )
    abline(0,1,lty=1,lwd=1) ; abline(h=seq(0,1,.2),lty=3,col="grey50",lwd=1) ; abline(v=seq(0,1,.2),lty=3,col="grey50",lwd=1)
     # Pr<0
-   points( PROBS.0.lis, PROBS.0.lme, col="firebrick1",pch=1,lwd=2,cex=rowMeans(cbind(SIG.i.lis[,2],SIG.i[,2])) )
+   points( PROBS.0.lis, PROBS.0.lme, col="firebrick1",pch=1,lwd=2,cex=rowMeans(cbind(SIG.i.lis[,2],SIG.i.lme[,2])) )
    abline(lm( PROBS.0.lme ~ PROBS.0.lis ), col="firebrick4",lwd=2,lty=2 )
    # hist( PROBS.0.lis, freq=F,col="firebrick1",density=20,angle=45, add=T )
-   points( PROBS.1.lis, PROBS.1.lme, col="chartreuse1",pch=1,lwd=2,cex=rowMeans(cbind(SIG.i.lis[,2],SIG.i[,2])) )
+   points( PROBS.1.lis, PROBS.1.lme, col="chartreuse1",pch=1,lwd=2,cex=rowMeans(cbind(SIG.i.lis[,2],SIG.i.lme[,2])) )
    abline(lm( PROBS.1.lme ~ PROBS.1.lis ), col="chartreuse4",lwd=2,lty=2 )
    # hist( PROBS.1.lis, freq=F,col="chartreuse1",density=20,angle=-45, add=T )
    dev.off() # Close png Output
@@ -202,8 +213,8 @@ DO_IT <- function( TAB, file_tag ) {
    # summary(lme(DAS~DRUG*(WK+RF_ACPA),random=~DRUG+WK|IID,data=TAB))$tTable
       
    ## Calculate Shrinkage
-   SHRINK.int <- MU.i.lis[,1] - MU.i[,1]
-   SHRINK.drug <- MU.i.lis[,2] - MU.i[,2]
+   SHRINK.int <- MU.i.lis[,1] - MU.i.lme[,1]
+   SHRINK.drug <- MU.i.lis[,2] - MU.i.lme[,2]
 
    ## Output Compiled Results
    COMPILE <- list( SHRINK.int, SHRINK.drug, PROBS.0.lme, PROBS.0.lis, PROBS.1.lme, PROBS.1.lis, POST.lme, POST.lis )
@@ -311,8 +322,8 @@ POST.lme <- OUT$POST.lme
 
 ## Plot Posterior Distributions for Individuals
  # Parameters
-N <- 10 ; WHICH <- sample(1:nrow(POST.lis),N)
-XX <- seq( -10,10,.05 )
+N <- 8 ; WHICH <- sample(1:nrow(POST.lis),N) ; rand <- sample(1:100,1)
+XX <- seq( -10,10,.01 )
 COLS <- c("deepskyblue2","chocolate2","slateblue3")
 COLS.lis.list <- c("black",COLS[1])
 COLS.lis <- colorRampPalette(COLS.lis.list)(2+N)[1:N+2]
@@ -320,6 +331,7 @@ COLS.lme.list <- c("black",COLS[2])
 COLS.lme <- colorRampPalette(COLS.lme.list)(2+N)[1:N+2]
 PROBS.0.lis <- PROBS.0.lme <- PROBS.1.lis <- PROBS.1.lme <- numeric( nrow(POST.lis) )
  # Open Plot
+png( paste(PathToPlot,"SHRINK_4-PostProb_Distribs.",rand,".png",sep=""), height=1000,width=1500, pointsize=28 )
 plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
 abline( v=c(0,-1),lty=2,lwd=2,col=c("firebrick1","chartreuse1") )
 abline( v=3.8 )
@@ -334,19 +346,20 @@ for ( i in 1:nrow(POST.lis) ) {
    if ( i %in% WHICH ) { w <- w + 1
       # LIS
       color <- COLS.lis[w]
-      points( XX, dnorm( XX,POST.lis[i,"PMD"],POST.lis[i,"PSD"]), type="l",col=color )
-      arrows( POST.lis[i,"PMD"],2,POST.lis[i,"PMD"],1.75, col=color,length=.1 )
-      text( 2.7,quantile(c(.2,1.8),(w)/N), label=round(PROBS.0.lis[i],2),col=color )
-      text( 4.2,quantile(c(.2,1.8),(w)/N), label=round(PROBS.1.lis[i],2),col=color )
+      points( XX, dnorm( XX,POST.lis[i,"PMD"],POST.lis[i,"PSD"]), type="l",col=color,lwd=2 )
+      arrows( POST.lis[i,"PMD"],1.85,POST.lis[i,"PMD"],1.75, col=color,length=.1,lwd=2 )
+      text( 2.7,quantile(c(.1,1.8),(w)/N), label=round(PROBS.0.lis[i],2),col=color )
+      text( 4.2,quantile(c(.1,1.8),(w)/N), label=round(PROBS.1.lis[i],2),col=color )
       # LME
       color <- COLS.lme[w]
-      points( XX, dnorm( XX,POST.lme[i,"PMD"],POST.lme[i,"PSD"]), type="l",col=color )
-      arrows( POST.lme[i,"PMD"],2,POST.lme[i,"PMD"],1.85, col=color,length=.1 )
-      text( 3.3,quantile(c(.1,1.7),(w)/N), label=round(PROBS.0.lme[i],2),col=color )
-      text( 4.8,quantile(c(.1,1.7),(w)/N), label=round(PROBS.1.lme[i],2),col=color )
+      points( XX, dnorm( XX,POST.lme[i,"PMD"],POST.lme[i,"PSD"]), type="l",col=color,lwd=2 )
+      arrows( POST.lme[i,"PMD"],1.95,POST.lme[i,"PMD"],1.85, col=color,length=.1,lwd=2 )
+      text( 3.3,quantile(c(.1,1.8),(w)/N), label=round(PROBS.0.lme[i],2),col=color )
+      text( 4.8,quantile(c(.1,1.8),(w)/N), label=round(PROBS.1.lme[i],2),col=color )
    }
 }
-
+legend( "topleft", fill=COLS[1:2], legend=c("LIS","LME") )
+dev.off()
 
 
 
@@ -366,11 +379,11 @@ for ( i in 1:nrow(POST.lis) ) {
 # plot( colMeans(rbind(SD.lis[[o]],SD.lme[[o]])), SHR.int[[o]], pch="+", col=COLS.box[1], main=names(SHRINK)[o] ) ; abline(lm( SHR.int[[o]]~colMeans(rbind(SD.lis[[o]],SD.lme[[o]])) ) ,lty=2,col=COLS.box[1] )
 # points( colMeans(rbind(SD.lis[[o]],SD.lme[[o]])), SHR.drug[[o]], col=COLS.box[2] ) ; abline(lm( SHR.drug[[o]]~colMeans(rbind(SD.lis[[o]],SD.lme[[o]])) ) ,lty=2,col=COLS.box[2] )
 
-# LIM.I <- range( MU.i[,1],MU.i.lis[,1] )
-# LIM.D <- range( MU.i[,2],MU.i.lis[,2] )
+# LIM.I <- range( MU.i.lm[,1],MU.i.lis[,1] )
+# LIM.D <- range( MU.i.lm[,2],MU.i.lis[,2] )
 # par(mfrow=c(1,2))
-# plot( MU.i.lis[,1], MU.i[,1], xlim=LIM.I, ylim=LIM.I, main="Intercept" ) ; abline(0,1)
-# plot( MU.i.lis[,2], MU.i[,2], xlim=LIM.D, ylim=LIM.D, main="Drug" ) ; abline(0,1)
+# plot( MU.i.lis[,1], MU.i.lm[,1], xlim=LIM.I, ylim=LIM.I, main="Intercept" ) ; abline(0,1)
+# plot( MU.i.lis[,2], MU.i.lm[,2], xlim=LIM.D, ylim=LIM.D, main="Drug" ) ; abline(0,1)
 
 
 
