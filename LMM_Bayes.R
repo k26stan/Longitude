@@ -18,47 +18,44 @@
    # b/n Patient Variance (from Mixed Model)
    # w/i Patient Variance (from Mixed Model)
 
+library(nlme)
+library(gplots)
+
 ##############################################################
 ## LOAD DATA #################################################
 ##############################################################
-library(nlme)
-library(gplots)
 
 ## Set Date
 DATE <- gsub("-","",Sys.Date())
 
 ## Mac Paths
-# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150226_Resp_v_Time.txt"
-# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150506_Resp_v_Time.txt"
-# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150512_Resp_v_Time.txt"
-PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150530_Resp_v_Time.txt"
 PathToRawFiles <- "/Users/kstandis/Data/Burn/Data/Phenos/Raw_Files/"
-PathToFT <- "/Users/kstandis/Data/Burn/Data/Phenos/Full_Tables/"
-PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,"_Long_Bayes/",sep="" )
+PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150530_Resp_v_Time.txt"
+PathToFT <- "/Users/kstandis/Data/Burn/Data/Phenos/Full_Tables/20150520_Full_Table.txt"
+PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,"_LME_Bayes/",sep="" )
 dir.create( PathToPlot )
 
 ## Previously Compiled Data
 TAB.l <- read.table( PathToData, sep="\t",header=T, stringsAsFactors=F )
-FUL <- read.table( paste(PathToFT,"20141229_Full_Table.txt",sep=""),sep="\t",header=T)
-TAB.PC <- merge( TAB.l, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
-# Get unique Weeks for plotting purposes
+FUL <- read.table( PathToFT,sep="\t",header=T)
+
+## Get unique Weeks for plotting purposes
 WKS <- unique( TAB.l$WK )
 
 ## Load Candidate Genotype Files
-COMP.l <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/CND_LT8_DEL_MNe_MN_DAS_BL_MN_PC1_PC2.compile.short", sep="\t",header=T)
-COMP <- COMP.l[ which(!duplicated(COMP.l$SNP)), ]
-RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw", sep="",header=T)
+# TAB.PC <- merge( TAB.l, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
+# COMP.l <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/CND_LT8_DEL_MNe_MN_DAS_BL_MN_PC1_PC2.compile.short", sep="\t",header=T)
+# COMP <- COMP.l[ which(!duplicated(COMP.l$SNP)), ]
+# RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw", sep="",header=T)
 
 ##############################################################
 ## FILTER DATA ###############################################
 ##############################################################
 
-TAB <- TAB.l
-
 ## Take out Patients who left before getting DRUG
 RM.exit.id <- as.character( FUL$ID_2[which(FUL$IN<=4)] )
-RM.exit <- which( TAB$IID %in% RM.exit.id )
-TAB <- TAB[-RM.exit,c(1:15,17)]
+RM.exit <- which( TAB.l$IID %in% RM.exit.id )
+TAB <- TAB.l[-RM.exit,c(1:15,17)]
 
 ## Take out Patients from Golimumab Arm
 RM.gol.id <- as.character( FUL$ID_2[which(FUL$GRP=="G")] )
@@ -86,12 +83,7 @@ DO_IT <- function( TAB, file_tag ) {
    	 # Smaller (less positive) AIC/BIC is better model
 
    ## Mixed Effects Model
-   # LME.1 <- lme( fixed = DAS ~ DRUG, random = ~ 1 | IID, data=TAB )
-   LME.2 <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID, data=TAB )
-   # LME.3 <- lme( fixed = DAS ~ DRUG, random = ~ DRUG - 1 | IID, data=TAB )
-   # LME.4 <- lme( fixed = DAS ~ DRUG - 1, random = ~ DRUG - 1 | IID, data=TAB )
-    # Go with LME.2
-   LME <- LME.2
+   LME <- lme( fixed = DAS ~ DRUG, random = ~ DRUG | IID, data=TAB )
 
    ## Compile Stats for Bayesian Inference
     # mu(i) estimates
@@ -101,9 +93,7 @@ DO_IT <- function( TAB, file_tag ) {
    MU.0.lme <- fixef(LME)
    MU.i.lme <- coef(LME)
    TAU.lme <- as.numeric( VarCorr(LME)[1:2,"StdDev"] ) ; names(TAU.lme) <- names(MU.0.lme)
-   # TAU <- intervals( LME, which="var-cov" )
    SIG.i.lme <- aggregate( x=data.frame(resid(LME)), by=list(TAB$IID), sd )
-   # SIG.i <- LME$sigma
 
    POST.lme <- merge( MU.i.lme, SIG.i.lme, by.x="row.names",by.y="Group.1", all=T )
    colnames(POST.lme) <- c("ID","INT","PMD","PSD")
