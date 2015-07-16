@@ -574,8 +574,8 @@ for ( c in 1:length(CAND.colnames) ) {
 }
 
 ## Pull out p-value for Variants
-LME.VAR.p.cand <- unlist(lapply( LME.VAR, function(x) summary(x)$tTable[grep("^rs",rownames(summary(x)$tTable)),"p-value"] ))
-LME.VAR.p.cand.dr <- unlist(lapply( LME.VAR, function(x) summary(x)$tTable[grep("^DRUG:rs",rownames(summary(x)$tTable)),"p-value"] ))
+LME.VAR.p.cand <- unlist(lapply( LME.VAR, function(x) summary(x)$tTable[3,"p-value"] )) # unlist(lapply( LME.VAR, function(x) summary(x)$tTable[grep("^rs",rownames(summary(x)$tTable)),"p-value"] ))
+LME.VAR.p.cand.dr <- unlist(lapply( LME.VAR, function(x) summary(x)$tTable[9,"p-value"] ))
 # LME.VAR.p.cand.wk <- unlist(lapply( LME.VAR, function(x) summary(x)$tTable["^WK:rs","p-value"] ))
 # LME.VAR.p.cand.dr.wk <- unlist(lapply( LME.VAR, function(x) summary(x)$tTable["DRUG:WK:cand","p-value"] ))
 # P.comp <- data.frame( ID=GWAS.id, GWAS=GWAS.p, DIS=LME.VAR.p.cand, DR=LME.VAR.p.cand.dr, WK=LME.VAR.p.cand.wk, DR_WK=LME.VAR.p.cand.dr.wk )
@@ -602,8 +602,8 @@ png( paste(PathToPlot,"V-LME_P-Vals_CAND.png",sep="/"), height=1000+nrow(P.comp.
 plot( -log10(P.comp.2$GWAS), main="Variant Effect in Mixed Model", col=COLS[1],pch="+", ylim=c(0,9),xaxt="n",xlab="Variant",ylab="-log10(p)",cex=1.5 )
 points( -log10(P.comp.2$DIS), col=COLS[2],pch="+",cex=1.5 )
 points( -log10(P.comp.2$DR), col=COLS[3],pch="+",cex=1.5 )
-points( -log10(P.comp.2$WK), col=COLS[4],pch="+",cex=1.5 )
-points( -log10(P.comp.2$DR_WK), col=COLS[5],pch="+",cex=1.5 )
+# points( -log10(P.comp.2$WK), col=COLS[4],pch="+",cex=1.5 )
+# points( -log10(P.comp.2$DR_WK), col=COLS[5],pch="+",cex=1.5 )
 axis( 1, at=1:nrow(P.comp.2), label=rownames(P.comp.2),las=2,cex.axis=.7 )
 abline( h=seq(0,15,1),lty=2,col="grey50")
 abline( h=-log10(5e-8),lty=2,col="firebrick2")
@@ -613,13 +613,14 @@ dev.off()
 P.comp.3 <- P.comp[ which(apply( P.comp[c("GWAS","DIS","DR")], 1, function(x) any(x<1e-7) )) , ]
 
 ## Plot GWAS results vs LMM Results
-quartz()
+png( paste(PathToPlot,"V-LME_P-Vals_GWASvLMM.png",sep="/"), height=1200,width=1200,pointsize=30 )
 LIM <- c(0, -log10(min(P.comp[,-1],na.rm=T)) )
 plot( -log10(P.comp$GWAS),-log10(P.comp$DR),xlim=LIM,ylim=LIM,xlab="GWAS",ylab="LMM",main="GWAS vs LMM for Drug Response",pch="+",cex=1.5,col=COLS[3]) # ,col=colorRampPalette(COLS[c(1,3)])(3)[2] )
 abline( v=seq(0,10,1),lty=2,col="grey50") ; abline( h=seq(0,10,1),lty=2,col="grey50") 
 abline(0,1,lty=1,col="black")
 abline( h=-log10(5e-8),lty=2,col="firebrick2") ; abline( v=-log10(5e-8),lty=2,col="firebrick2")
-cor( -log10(P.comp$GWAS),-log10(P.comp$DR) )
+dev.off()
+
 
 ##############################################################
 ## END OF DOC ################################################
