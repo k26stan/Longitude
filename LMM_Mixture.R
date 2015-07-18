@@ -178,6 +178,7 @@ PULL_MOD_INFO <- function(PAR) {
 	COMPILE <- list( CONV=CONV, IC=IC, COEF=COEF, PVALS=PVALS, ALL_COEFS=ALL_COEFS, GRPS=GRPS )
 	return(COMPILE)
 }
+
 # SUMM <- lapply( MIX, function(x) PULL_MOD_INFO(x) )
 
 ##############################################################
