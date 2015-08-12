@@ -167,7 +167,7 @@ DO_IT <- function( TAB, file_tag ) {
    par(mfrow=c(1,2))
 
    ## Plot Shrinkage of Coefficients w/ Mixed Effects Model
-   COLS <- c("deepskyblue2","chocolate2","slateblue3")
+   COLS <- c("slateblue3","chocolate2","cadetblue2") # c("deepskyblue2","chocolate2","slateblue3")
    XLIM <- c(1,9) # range( MU.i.lm[,1],MU.i.lis[,1] )
    YLIM <- c(-5,3) # range( MU.i.lm[,2],MU.i.lis[,2] )
    plot( 0,0,type="n", xlim=XLIM,ylim=YLIM,xlab="Intercept",ylab="DRUG", main="Individual vs Mixed Effects Model Coefficients" )
@@ -175,9 +175,9 @@ DO_IT <- function( TAB, file_tag ) {
    points( MU.i.lis[,1],MU.i.lis[,2], col=COLS[1], pch=20, cex=SIG.i.lis[,2] )
    points( MU.i.lme[,1],MU.i.lme[,2], col=COLS[2], pch=20, cex=SIG.i.lme[,2] )
    abline( v=mean(MU.i.lis[,1]),col=COLS[1],lty=2,lwd=2 ) ; abline( h=mean(MU.i.lis[,2]),col=COLS[1],lty=2,lwd=2 )
-   abline( v=mean(MU.i.lme[,1]),col=COLS[2],lty=2,lwd=1 ) ; abline( h=mean(MU.i.lme[,2]),col=COLS[2],lty=2,lwd=1 )
-   points( MU.0.lm[1],MU.0.lm[2], pch=10,col=COLS[3],cex=2,lwd=2 )
-   legend( "bottomleft",legend=c("LIS","LME","LM","Hi_Var","Lo_Var"),col=c(COLS,"black","black"),pch=c(20,20,10,20,20),pt.cex=c(1,1,2,2,.5))
+   abline( v=mean(MU.i.lme[,1]),col=COLS[2],lty=3,lwd=2 ) ; abline( h=mean(MU.i.lme[,2]),col=COLS[2],lty=3,lwd=2 )
+   points( MU.0.lm[1],MU.0.lm[2], pch=10,col=COLS[3],cex=2.5,lwd=3 )
+   legend( "bottomleft",legend=c("LIS","LME","LM","Hi_Var","Lo_Var"),col=c(COLS,"black","black"),pch=c(20,20,10,20,20),pt.cex=c(1,1,2,2,.5),pt.lwd=c(1,1,1,1,3))
 
    ## Plot Probabilities for LME vs LIS
    plot( 0,0,type="n",xlim=c(0,1),ylim=c(0,1), main="Probability of Treatment Response",xlab="Individual Model",ylab="Mixed Effects Model" )
@@ -213,7 +213,20 @@ DO_IT <- function( TAB, file_tag ) {
 
 } # Close Function
 
-TEST <- DO_IT(TAB, "Full")
+## Run on Full Cohort
+FULL <- DO_IT(TAB, "Full")
+
+## Run on only Patients in Placebo Arm
+ # Take out Patients from Golimumab Arm
+RM.gol.id <- as.character( FUL$ID_2[which(FUL$GRP=="G")] )
+RM.gol <- which( TAB$IID %in% RM.gol.id )
+TAB.p <- TAB[ -RM.gol, ]
+TAB.g <- TAB[ RM.gol, ]
+ # Take out WK==0
+TAB.p <- TAB.p[ which(TAB.p$WK!=0), ]
+ # Placebo Arm Estimates
+PLAC <- DO_IT(TAB.p, "Plac")
+GOL <- DO_IT(TAB.g, "Gol") # Doesn't Work...(probably not enough DRUG==0 points)
 
 ##############################################################
 ## OPTIONAL: DOWN SAMPLE TO ASSESS SHRINKAGE #################
@@ -222,21 +235,24 @@ TEST <- DO_IT(TAB, "Full")
  # Output Amount of Shrinkage (Int & Drug) at each level of down-sampling
 Obs_per_Person <- table( TAB$IID )
 barplot( table( Obs_per_Person ))
-RM.exit.2.id <- names(Obs_per_Person)[which(Obs_per_Person<15)]
+MAX_OBS <- 16
+RM.exit.2.id <- names(Obs_per_Person)[which(Obs_per_Person<MAX_OBS)]
 RM.exit.2 <- which(TAB$IID %in% RM.exit.2.id)
 TAB.2 <- TAB[ -RM.exit.2, ] # Should be 120 patients, each with 15 measurements
 
 ## Number of Observations to Down Sample to
 N.pats <- length(unique( TAB.2$IID ))
 N.rep <- 20
-N.obs <- c( 15, rep(12,N.rep), rep(9,N.rep), rep(6,N.rep), rep(3,N.rep) )
+N.obs <- c( 15, rep(12,N.rep), rep(9,N.rep), rep(6,N.rep), rep(3,N.rep) ) + 1
+N.obs.uniq <- unique( N.obs )
 SHRINK <- list()
 for ( o in 1:length(N.obs) ) {
    obs <- N.obs[o]
    tag <- paste( "It",o,"_",obs,"obs",sep="")
    print(tag)
    ## Down Sample Table
-   which_rows <- sort(c(apply( matrix(1:nrow(TAB.2),byrow=T,ncol=15), 1, function(x) c(sample(x[1:5],obs/3),sample(x[6:10],obs/3),sample(x[11:15],obs/3)) )))
+   # which_rows <- sort(c(apply( matrix(1:nrow(TAB.2),byrow=T,ncol=MAX_OBS), 1, function(x) c(sample(x[1:5],obs/3),sample(x[6:10],obs/3),sample(x[11:15],obs/3)) )))
+   which_rows <- sort(c(apply( matrix(1:nrow(TAB.2),byrow=T,ncol=MAX_OBS), 1, function(x) c(x[1],sample(x[1:5+1],(obs-1)/3),sample(x[6:10+1],(obs-1)/3),sample(x[11:15+1],(obs-1)/3)) )))
    TEMP_TAB <- TAB.2[ which_rows, ]
    SHRINK[[tag]] <- DO_IT(TEMP_TAB, tag )
 }
@@ -278,11 +294,27 @@ png( paste(PathToPlot,"SHRINK_3-Shrink_vs_Var.png",sep=""), height=800,width=240
 par(mfrow=c(1,3))
  # Intercept
 plot( VARR$SHR.int[ORDER] ~ VARR$SD[ORDER], col=COLS.list[factor(VARR$OBS[ORDER])], main="Intercept Coef Shrinkage vs Variance",xlab="Within Patient Variance",ylab="Coef[LIS] - Coef[LME]", )
-abline(lm(SHR.int~SD,data=VARR,subset=OBS==3), col=COLS.3.list[1],lwd=2 )
-abline(lm(SHR.int~SD,data=VARR,subset=OBS==6), col=COLS.3.list[2],lwd=2 )
-abline(lm(SHR.int~SD,data=VARR,subset=OBS==9), col=COLS.3.list[3],lwd=2 )
-abline(lm(SHR.int~SD,data=VARR,subset=OBS==12), col=COLS.3.list[4],lwd=2 )
-abline(lm(SHR.int~SD,data=VARR,subset=OBS==15), col=COLS.3.list[5],lwd=2 )
+for ( i in 1:length(N.obs.uniq) ) {
+   obs <- N.obs.uniq[i]
+   abline(lm(SHR.int~SD,data=VARR,subset=OBS==obs), col=COLS.3.list[i],lwd=2 )
+}
+plot( VARR$SHR.drug[ORDER] ~ VARR$SD[ORDER], col=COLS.list[factor(VARR$OBS[ORDER])], main="Drug Coef Shrinkage vs Variance",xlab="Within Patient Variance",ylab="Coef[LIS] - Coef[LME]", )
+for ( i in 1:length(N.obs.uniq) ) {
+   obs <- N.obs.uniq[i]
+   abline(lm(SHR.drug~SD,data=VARR,subset=OBS==obs), col=COLS.3.list[i],lwd=2 )
+}
+plot( VARR$SHR.pyth[ORDER] ~ VARR$SD[ORDER], col=COLS.list[factor(VARR$OBS[ORDER])], main="Pyth Coef Shrinkage vs Variance",xlab="Within Patient Variance",ylab="Coef[LIS] - Coef[LME]", )
+for ( i in 1:length(N.obs.uniq) ) {
+   obs <- N.obs.uniq[i]
+   abline(lm(SHR.pyth~SD,data=VARR,subset=OBS==obs), col=COLS.3.list[i],lwd=2 )
+}
+legend( "topleft", fill=COLS.list,legend=rev(unique(VARR$OBS)),title="# Obs/Patient" )
+dev.off()
+# abline(lm(SHR.int~SD,data=VARR,subset=OBS==3), col=COLS.3.list[1],lwd=2 )
+# abline(lm(SHR.int~SD,data=VARR,subset=OBS==6), col=COLS.3.list[2],lwd=2 )
+# abline(lm(SHR.int~SD,data=VARR,subset=OBS==9), col=COLS.3.list[3],lwd=2 )
+# abline(lm(SHR.int~SD,data=VARR,subset=OBS==12), col=COLS.3.list[4],lwd=2 )
+# abline(lm(SHR.int~SD,data=VARR,subset=OBS==15), col=COLS.3.list[5],lwd=2 )
  # Drug
 plot( VARR$SHR.drug[ORDER] ~ VARR$SD[ORDER], col=COLS.list[factor(VARR$OBS[ORDER])], main="Drug Coef Shrinkage vs Variance",xlab="Within Patient Variance",ylab="Coef[LIS] - Coef[LME]", )
 abline(lm(SHR.drug~SD,data=VARR,subset=OBS==3), col=COLS.3.list[1],lwd=2 )
@@ -310,11 +342,104 @@ POST.lme <- OUT$POST.lme
 # PROBS.lis <- OUT$PR.lis
 # PROBS.lme <- OUT$PR.lme
 
+## SINGLE PATIENT, PROB X<0 & X<-1 IN SEPARATE PLOTS ##
+ # Parameters
+N <- 1 ; WHICH <- sample(1:nrow(POST.lis),N) ; rand <- sample(1:100,1)
+XX <- seq( -10,10,.01 )
+XX.0 <- seq( -10,0,.01 )
+XX.1 <- seq( -10,-1,.01 )
+XLIM <- c(-6,3)
+YLIM <- c(0,1)
+THRSH_COLS <- c("firebrick3","chartreuse3")
+COLS <- c("slateblue1","chocolate1","cadetblue2")
+PROBS.0.lis <- PROBS.0.lme <- PROBS.1.lis <- PROBS.1.lme <- numeric( nrow(POST.lis) )
+ # Open Plot
+png( paste(PathToPlot,"SHRINK_4-PostProb_Distribs.",rand,".png",sep=""), height=1000,width=1800, pointsize=28 )
+par(mfrow=c(1,2))
+ # X<0 PLOT
+plot( 0,0,type="n",xlim=XLIM,ylim=YLIM,xlab="Posterior Mean Difference",ylab="", main="Posterior Probability of Response (< 0)" )
+text( quantile(XLIM,.85), quantile(YLIM,.97), label="Pr < 0",col=THRSH_COLS[1] )
+abline( v=0,lty=2,lwd=2,col=THRSH_COLS[1] )
+w <- 0
+for ( i in 1:nrow(POST.lis) ) {
+   PROBS.0.lme[i] <- pnorm( 0, POST.lme[i,"PMD"],POST.lme[i,"PSD"], lower.tail=T )
+   PROBS.1.lme[i] <- pnorm( -1, POST.lme[i,"PMD"],POST.lme[i,"PSD"], lower.tail=T )
+   PROBS.0.lis[i] <- pnorm( 0, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
+   PROBS.1.lis[i] <- pnorm( -1, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
+   if ( i %in% WHICH ) { w <- w + 1
+      # LIS
+      color <- COLS[1]
+      YY <- dnorm( XX,POST.lis[i,"PMD"],POST.lis[i,"PSD"])
+      YY.pol <- dnorm( XX.0,POST.lis[i,"PMD"],POST.lis[i,"PSD"])
+      points( XX, YY, type="l",col=color,lwd=2 )
+      polygon( c(XX.0,XX.0[length(XX.0)],XX.0[1]), c(YY.pol,0,0), col=color,density=20,angle=45 )
+      abline( v=POST.lis[i,"PMD"],lty=1,col=color,lwd=2)
+      text( quantile(XLIM,.75),quantile(c(0.05,0.9)*YLIM[2],w/N), label=round(PROBS.0.lis[i],2),col=color )
+      # LME
+      color <- COLS[2]
+      YY <- dnorm( XX,POST.lme[i,"PMD"],POST.lme[i,"PSD"])
+      YY.pol <- dnorm( XX.0,POST.lme[i,"PMD"],POST.lme[i,"PSD"])
+      points( XX, YY, type="l",col=color,lwd=2 )
+      polygon( c(XX.0,XX.0[length(XX.0)],XX.0[1]), c(YY.pol,0,0), col=color,density=20,angle=-45 )
+      abline( v=POST.lme[i,"PMD"],lty=1,col=color,lwd=2)
+      text( quantile(XLIM,.9),quantile(c(0.05,0.9)*YLIM[2],w/N), label=round(PROBS.0.lme[i],2),col=color )
+   }
+}
+ # X<0 PLOT
+plot( 0,0,type="n",xlim=XLIM,ylim=YLIM,xlab="Posterior Mean Difference",ylab="", main="Posterior Probability of Response (< -1)" )
+text( quantile(XLIM,.85), quantile(YLIM,.97), label="Pr < -1",col=THRSH_COLS[2] )
+abline( v=-1,lty=2,lwd=2,col=THRSH_COLS[2] )
+w <- 0
+for ( i in 1:nrow(POST.lis) ) {
+   PROBS.0.lme[i] <- pnorm( 0, POST.lme[i,"PMD"],POST.lme[i,"PSD"], lower.tail=T )
+   PROBS.1.lme[i] <- pnorm( -1, POST.lme[i,"PMD"],POST.lme[i,"PSD"], lower.tail=T )
+   PROBS.0.lis[i] <- pnorm( 0, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
+   PROBS.1.lis[i] <- pnorm( -1, POST.lis[i,"PMD"],POST.lis[i,"PSD"], lower.tail=T )
+   if ( i %in% WHICH ) { w <- w + 1
+      # LIS
+      color <- COLS[1]
+      YY <- dnorm( XX,POST.lis[i,"PMD"],POST.lis[i,"PSD"])
+      YY.pol <- dnorm( XX.1,POST.lis[i,"PMD"],POST.lis[i,"PSD"])
+      points( XX, YY, type="l",col=color,lwd=2 )
+      polygon( c(XX.1,XX.1[length(XX.1)],XX.1[1]), c(YY.pol,0,0), col=color,density=20,angle=45 )
+      abline( v=POST.lis[i,"PMD"],lty=1,col=color,lwd=2)
+      text( quantile(XLIM,.75),quantile(c(0.05,0.9)*YLIM[2],w/N), label=round(PROBS.1.lis[i],2),col=color )
+      # LME
+      color <- COLS[2]
+      YY <- dnorm( XX,POST.lme[i,"PMD"],POST.lme[i,"PSD"])
+      YY.pol <- dnorm( XX.1,POST.lme[i,"PMD"],POST.lme[i,"PSD"])
+      points( XX, YY, type="l",col=color,lwd=2 )
+      polygon( c(XX.1,XX.1[length(XX.1)],XX.1[1]), c(YY.pol,0,0), col=color,density=20,angle=-45 )
+      abline( v=POST.lme[i,"PMD"],lty=1,col=color,lwd=2)
+      text( quantile(XLIM,.9),quantile(c(0.05,0.9)*YLIM[2],w/N), label=round(PROBS.1.lme[i],2),col=color )
+   }
+}
+ # Legend
+legend( "topleft", fill=COLS[1:2], legend=c("LIS","LME") )
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Plot Posterior Distributions for Individuals
  # Parameters
-N <- 8 ; WHICH <- sample(1:nrow(POST.lis),N) ; rand <- sample(1:100,1)
+N <- 1 ; WHICH <- sample(1:nrow(POST.lis),N) ; rand <- sample(1:100,1)
 XX <- seq( -10,10,.01 )
-COLS <- c("deepskyblue2","chocolate2","slateblue3")
+THRSH_COLS <- c("firebrick1","chartreuse1")
+COLS <- c("slateblue1","chocolate1","cadetblue2")
 COLS.lis.list <- c("black",COLS[1])
 COLS.lis <- colorRampPalette(COLS.lis.list)(2+N)[1:N+2]
 COLS.lme.list <- c("black",COLS[2])
@@ -323,10 +448,10 @@ PROBS.0.lis <- PROBS.0.lme <- PROBS.1.lis <- PROBS.1.lme <- numeric( nrow(POST.l
  # Open Plot
 png( paste(PathToPlot,"SHRINK_4-PostProb_Distribs.",rand,".png",sep=""), height=1000,width=1500, pointsize=28 )
 plot( 0,0,type="n",xlim=c(-5,5),ylim=c(0,2),xlab="Posterior Mean Difference",ylab="" )
-abline( v=c(0,-1),lty=2,lwd=2,col=c("firebrick1","chartreuse1") )
+abline( v=c(0,-1),lty=2,lwd=2,col=THRSH_COLS )
 abline( v=3.8 )
-text( 3, 2, label="Pr < 0",col="firebrick1" )
-text( 4.5, 2, label="Pr < -1",col="chartreuse1" )
+text( 3, 2, label="Pr < 0",col=THRSH_COLS[1] )
+text( 4.5, 2, label="Pr < -1",col=THRSH_COLS[2] )
 w <- 0
 for ( i in 1:nrow(POST.lis) ) {
    PROBS.0.lme[i] <- pnorm( 0, POST.lme[i,"PMD"],POST.lme[i,"PSD"], lower.tail=T )
