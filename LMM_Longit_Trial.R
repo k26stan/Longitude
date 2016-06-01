@@ -30,26 +30,17 @@ library(gplots)
 DATE <- gsub("-","",Sys.Date())
 
 ## Mac Paths
-# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150226_Resp_v_Time.txt"
-# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150506_Resp_v_Time.txt"
-# PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150512_Resp_v_Time.txt"
-PathToData <- "/Users/kstandis/Data/Burn/Data/Phenos/Time_Series/20150530_Resp_v_Time.txt"
-PathToRawFiles <- "/Users/kstandis/Data/Burn/Data/Phenos/Raw_Files/"
-PathToFT <- "/Users/kstandis/Data/Burn/Data/Phenos/Full_Tables/"
-PathToPlot <- paste("/Users/kstandis/Data/Burn/Plots/",DATE,"_LongTrial/",sep="" )
+PathToData <- "/Users/kstandis/Data/Janssen/Data/Pheno/Derived/20160112_Resp_v_Time.txt"
+PathToFT <- "/Users/kstandis/Data/Janssen/Data/Pheno/Derived/20151015_Full_Table.txt"
+PathToPlot <- paste("/Users/kstandis/Data/Janssen/Plots_Mac/",DATE,"_LongTrial/",sep="" )
 dir.create( PathToPlot )
 
 ## Previously Compiled Data
 TAB.l <- read.table( PathToData, sep="\t",header=T, stringsAsFactors=F )
-FUL <- read.table( paste(PathToFT,"20141229_Full_Table.txt",sep=""),sep="\t",header=T)
-TAB.2 <- merge( TAB.l, FUL[,c("ID_2",paste("PC",1:3,sep=""))], by.x="IID",by.y="ID_2")
-# Get unique Weeks for plotting purposes
-WKS <- unique( TAB.l$WK )
+FUL <- read.table( PathToFT,sep="\t",header=T)
 
-## Load Candidate Genotype Files
-COMP.l <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/CND_LT8_DEL_MNe_MN_DAS_BL_MN_PC1_PC2.compile.short", sep="\t",header=T)
-COMP <- COMP.l[ which(!duplicated(COMP.l$SNP)), ]
-RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw", sep="",header=T)
+## Get unique Weeks for plotting purposes
+WKS <- unique( TAB.l$WK )
 
 ##############################################################
 ## FILTER DATA ###############################################
@@ -57,22 +48,50 @@ RAW <- read.table( "/Users/kstandis/Data/Burn/Results/20150413_GWAS/TEST_CND.raw
 
 TAB <- TAB.l
 
-# ## Take out Patients who left before getting DRUG
-# RM.exit.id <- as.character( FUL$ID_2[which(FUL$IN<=4)] )
-# RM.exit <- which( TAB$IID %in% RM.exit.id )
-# TAB <- TAB[-RM.exit,c(1:15,17)]
+## Add ID Column w/ Short Hand
+TAB.id.short <- sapply( strsplit( TAB$IID, "-" ),"[",1 )
+TAB <- data.frame( ID=TAB.id.short, TAB[,-1] )
+
+## Change ACPA to 1/0
+TAB$ACPA <- as.numeric(TAB$ACPA=="Positive")
+
+## Take out Patients who left before getting DRUG
+RM.exit.id <- as.character( FUL$ID_2[which(FUL$IN<=4)] )
+RM.exit <- which( TAB$FID %in% RM.exit.id )
+TAB <- TAB[ -RM.exit, ]
+SAMPS <- unique(as.character(TAB$FID))
+SAMPS.short <- unique(as.character(TAB$ID))
+N.SAMPS <- length(SAMPS)
 
 ## Take out Patients from Golimumab Arm
 RM.gol.id <- as.character( FUL$ID_2[which(FUL$GRP=="G")] )
-RM.gol <- which( TAB$IID %in% RM.gol.id )
+RM.gol <- which( TAB$FID %in% RM.gol.id )
 TAB <- TAB[ -RM.gol, ]
 
-# ## Take out WK==0
-# TAB <- TAB[ which(TAB$WK!=0), ]
+## Make Clinical Table for each Phenotype
+RESP_PHENOS <- c("DAS","lCRP","rSJC","rTJC")
 
-## Remove NA Values for DAS
-TAB <- TAB[ which(!is.na(TAB$DAS)), ]
-dim(TAB)
+## FCT: Create Clin Table for each Response Phenotype
+MAKE_CLIN_TAB <- function( RESP_PHENO ) {
+	## Pull Response Phenotype of Interest
+	TEMP <- TAB[ , c(1:grep("PLAC",colnames(TAB)),which(colnames(TAB)==RESP_PHENO)) ]
+	## Remove DAS values that are NA
+	RM.na <- which(is.na( TEMP[,RESP_PHENO] ))
+	if (length(RM.na) > 0 ) { TEMP <- TEMP[-RM.na, ] }
+	## Return Table
+	return(TEMP)
+}
+
+## Make Clinical Table for each Phenotype
+RESP_PHENOS <- c("DAS","lCRP","rSJC","rTJC")
+CLIN_TABS <- lapply( RESP_PHENOS, function(x)MAKE_CLIN_TAB(x) )
+names(CLIN_TABS) <- RESP_PHENOS
+lapply(CLIN_TABS,dim)
+TAB <- CLIN_TABS$DAS
+
+# ## Remove NA Values for DAS
+# TAB <- TAB[ which(!is.na(TAB$DAS)), ]
+# dim(TAB)
 
 ##############################################################
 ## FCT: CALCULATE DRUG EFFECT AT GIVEN TIMEPOINT #############
@@ -85,39 +104,39 @@ BY_WK <- function( TAB.a, wk ) {
 	n.DRUG <- length(which(MEAS$DRUG==1))
 	n.PLAC <- length(which(MEAS$PLAC==1))
 	if ( n.DRUG>1 & n.PLAC>1 ) {
-		LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~DRUG+PLAC|IID ), silent=T)
+		LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~DRUG+PLAC|FID ), silent=T)
 		if ( class(LME)=="try-error" ) {
 			print(paste( "P+D: Fail.1 -",wk ))
-			LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~DRUG|IID ), silent=T)
+			LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~DRUG|FID ), silent=T)
 		}
 		if ( class(LME)=="try-error" ) {
 			print(paste( "P+D: Fail.2 -",wk ))
-			LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~PLAC|IID ), silent=T)
+			LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~PLAC|FID ), silent=T)
 		}
 		if ( class(LME)=="try-error" ) {
 			print(paste( "P+D: Fail.3 -",wk ))
-			LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~1|IID ), silent=T)
+			LME <- try( lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~1|FID ), silent=T)
 		}
 		if ( class(LME)=="try-error" ) { print(paste( "P+D: Fail.All -",wk )) }
 	}else{
 		if ( n.DRUG>1 ) {
-			LME <- try( lme( fixed= DAS ~ DRUG, data=MEAS, random= ~DRUG|IID ), silent=T)
+			LME <- try( lme( fixed= DAS ~ DRUG, data=MEAS, random= ~DRUG|FID ), silent=T)
 			if ( class(LME)=="try-error" ) {
 				print(paste( "D: Fail -",wk ))
-				LME <- lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~1|IID )	
+				LME <- lme( fixed= DAS ~ DRUG+PLAC, data=MEAS, random= ~1|FID )	
 			}
 		}
 		if ( n.PLAC>1 ) {
-			LME <- try( lme( fixed= DAS ~ PLAC, data=MEAS, random= ~PLAC|IID ), silent=T)
+			LME <- try( lme( fixed= DAS ~ PLAC, data=MEAS, random= ~PLAC|FID ), silent=T)
 			if ( class(LME)=="try-error" ) {
 				print(paste( "P: Fail -",wk ))
-				LME <- lme( fixed= DAS ~ PLAC, data=MEAS, random= ~1|IID )	
+				LME <- lme( fixed= DAS ~ PLAC, data=MEAS, random= ~1|FID )	
 			}
 		}
 	}
 
 	## Compile Output Stats
-	if ( n.DRUG>1 | n.PLAC>1) {
+	if ( (n.DRUG>1 | n.PLAC>1) & class(LME)!="try-error" ) {
 		COEF.0 <- summary(LME)$tTable
 		COEF.i <- coef(LME)
 		VAR.i <- LME$sigma
@@ -135,7 +154,7 @@ BY_WK <- function( TAB.a, wk ) {
 ##############################################################
 
 ## Get Number of Patients
-Samps <- as.character(unique( TAB$IID ))
+Samps <- as.character(unique( TAB$FID ))
 N.samps <- length(Samps)
 
 ## Simulate Start Dates for Patients
@@ -149,7 +168,7 @@ names(Enroll.samps) <- Samps
 TAB.a <- data.frame( TAB, WK.ab=0 )
 for ( s in 1:N.samps ) {
 	samp <- Samps[s]
-	TAB.a[ which(TAB.a$IID==samp), "WK.ab" ] <- TAB.a[ which(TAB.a$IID==samp), "WK" ] + Enroll.samps[s]
+	TAB.a[ which(TAB.a$FID==samp), "WK.ab" ] <- TAB.a[ which(TAB.a$FID==samp), "WK" ] + Enroll.samps[s]
 } ; hist( TAB.a$WK.ab, breaks=seq(0,100+Enroll.end,Enroll.countby),col="dodgerblue2" )
  # Get Range of Weeks
 WKS <- min(TAB.a$WK.ab):max(TAB.a$WK.ab)
@@ -291,7 +310,7 @@ COLS <- colorRampPalette(COLS.list)(N.samps)
 plot( 0,0,type="n",xlim=XLIM,ylim=YLIM, xlab="Weeks",ylab="Patient",main="Patient Enrollment over Time")
 for ( s in 1:N.samps ) {
 	samp.plot <- names(Enroll.samps)[order(Enroll.samps)][s]
-	which_rows <- which(TAB.a$IID==samp.plot)
+	which_rows <- which(TAB.a$FID==samp.plot)
 	points( TAB.a$WK.ab[which_rows], rep(s,length(which_rows)), col=COLS[s],type="o",pch=20,lwd=2 )
 }
  # Time of Measurements
@@ -378,7 +397,7 @@ points( WKS.plot, ARR[,"PLAC.f"], type="l",col="black", lwd=5,lty=2 )
  # Individual Data
 for ( s in 1:N.samps.plot ) {
 	samp.plot <- Samps.id.plot[s]
-	TEMP <- TAB.a[which(TAB.a$IID==samp.plot),]
+	TEMP <- TAB.a[which(TAB.a$FID==samp.plot),]
 	 # Lines
 	points( WKS.plot, IND[samp.plot,"DRUG",], type="l",col=COLS[s],lty=1,lwd=3 )
 	points( WKS.plot, IND[samp.plot,"PLAC",], type="l",col=COLS[s],lty=2,lwd=3 )

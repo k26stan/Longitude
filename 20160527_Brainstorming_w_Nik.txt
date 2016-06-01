@@ -1,0 +1,68 @@
+## Brainstorming for Longitudinal Analysis ##
+
+Why is this approach better?
+ - Don't throw away data (>6400 observations)
+ - Account for correlation structure (~15 measurements/person)
+ - Account for placebo
+ - Compromise of individual & population level effects (400+ patients)
+ - Posterior distributions (probability of response)
+
+What do I want to do?
+ - Validate use of Bayesian priors
+   - Test different sample sizes, means, & variances
+   - How do priors affect results?
+ - Build best Null model
+   - Test fixed effects
+   - Test random effects
+   - Test correlation structures
+   - WIC/LOO to compare
+ - Compare BRM_LMM model to...
+   - Models
+	   - "Single Timepoint" model(s)
+	   - "Mean" model
+	     - Simple...but few other advantages
+	   - "Fixed Regression" model
+	     - (similar to Mean)
+	   - "Individual BRM" model
+	     - Still gives individual posterior distributions...
+	     - ...but w/o random effects
+   - What features to compare?
+     - Shrinkage
+     - Power?
+     - Response profiles
+     - 
+ - Integrate genetics
+   - Sparse model w/ priors weighted to 0
+     - Like penalized regression approaches
+   - Individual models w/ variants or HLA
+   - Use priors from literature
+
+Coding PBO: PLAC vs TRT
+ - Ability to distinguish "Treatment" from "Drug" effects
+ - Total effect = Drug + Treatment
+ - 
+
+What specific questions do I want to answer?
+ - Can this approach be used to predict future timepoints for individuals?
+   - e.g., Train on wks 1:50, predict 50:100
+   - e.g., Stagger start times of patients, predict patients who haven't received drug yet
+ - How accurately can I impute missing values?
+ - Can we predict who dropped from trial?
+   - May have to run again w/ all patients (currently 14 removed)
+
+Spitballing:
+ - Run model w/ 3 timepoints for each person
+   - compare posterior probs...should be around 40-60% probability of response
+ - pull 900 data points
+   - 15*60 or 3*300
+   - compare posteriors probs for overlapping patients
+ - Compare variance of DRUG posteriors from patients in "GOL" arm to other arms
+   - Having only 1 bl measurement may increase uncertainty of posteriors
+
+
+
+
+
+
+
+
