@@ -56,6 +56,11 @@ Spitballing:
  - pull 900 data points
    - 15*60 or 3*300
    - compare posteriors probs for overlapping patients
+   * Kris:
+     - Downsample to N data points (randomly)
+     - Calculate Distance from Population Mean
+     - Compare vs # observations
+       - E.g., if only 1 observation on "DRUG", the random beta should be near population mean.
  - Compare variance of DRUG posteriors from patients in "GOL" arm to other arms
    - Having only 1 bl measurement may increase uncertainty of posteriors
 

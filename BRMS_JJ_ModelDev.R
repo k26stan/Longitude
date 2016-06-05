@@ -139,9 +139,9 @@ PathToData <- paste(Root,"Janssen/Data/Pheno/Derived/20160112_Resp_v_Time.txt",s
 PathToFT <- paste(Root,"Janssen/Data/Pheno/Derived/20151015_Full_Table.txt",sep="")
 PathToDer <- paste(Root,"Janssen/Data/Pheno/Derived/20150619_Derived_Pheno_Table.txt",sep="")
 PathToNullMod <- paste(Root,"Janssen/Plots_Mac/20160517_Null_All/",sep="")
-# PathToNullMod.T <- paste(Root,"/Janssen/Plots_Mac/20160523_Null_TRT_421/",sep="")
-PathToNullMod.T <- paste(Root,"/Janssen/Plots_Mac/20160601_Null_TRT_421/",sep="")
-PathToNullMod.Tc <- paste(Root,"/Janssen/Plots_Mac/20160601_Null_TRT_421/",sep="")
+# PathToNullMod.T <- paste(Root,"Janssen/Plots_Mac/20160523_Null_TRT_421/",sep="")
+PathToNullMod.T <- paste(Root,"Janssen/Plots_Mac/20160601_Null_TRT_421/",sep="")
+PathToNullMod.Tc <- paste(Root,"Janssen/Plots_Mac/20160601_Null_TRTcor_421/",sep="")
 PathToHLAMod.1 <- paste(Root,"Janssen/Plots_Mac/20160519_HLA_Fr20/",sep="")
 PathToPlot <- paste(Root,"Janssen/Plots_Mac/",DATE,"_",Dir.Tag,"/",sep="")
 dir.create( PathToPlot )
@@ -151,65 +151,50 @@ TAB.l <- read.table( PathToData, sep="\t",header=T, stringsAsFactors=F )
 FUL <- read.table( PathToFT,sep="\t",header=T)
 
 ## Load Previously Compiled Models & Data
-# JJ <- list()
-#  # Null Models
-# Temp.files <- grep( "Rdata$",list.files( PathToNullMod ), value=T )
-# Temp.files.2 <- grep( "Model_Summary", Temp.files, value=T,invert=T )
-# Temp.files.mods <- grep("Model",Temp.files.2, value=T,invert=F )
-# Temp.files.meta <- grep("Model",Temp.files.2, value=T,invert=T )
-# JJ[["Null"]] <- list()
-# for ( file in Temp.files.meta ) { load(paste(PathToNullMod,file,sep="")) }
-# for ( file in Temp.files.mods ) {
-# 	print(file)
-# 	mod.tag <- gsub( "Rdata.Model.","", gsub("i1.Rdata","",file, fixed=T),fixed=T)
-# 	print(mod.tag)
-# 	load(paste(PathToNullMod,file,sep=""))
-# 	JJ[["Null"]][[mod.tag]] <- model
-# }
-#  # HLA Models (1)
-# if ( !exists("JJ") ) { JJ <- list() }
-# Temp.files <- grep( "Rdata$",list.files( PathToHLAMod.1 ), value=T )
-# Temp.files.2 <- grep( "Model_Summary", Temp.files, value=T,invert=T )
-# Temp.files.mods <- grep("Model",Temp.files.2, value=T,invert=F )
-# Temp.files.meta <- grep("Model",Temp.files.2, value=T,invert=T )
-# for ( file in Temp.files.meta ) { load(paste(PathToHLAMod.1,file,sep="")) }
-# JJ[["hla10"]] <- list()
-# for ( file in Temp.files.mods ) {
-# 	print(file)
-# 	mod.tag <- gsub( "Rdata.Model.","", gsub(".Rdata","",file, fixed=T),fixed=T)
-# 	print(mod.tag)
-# 	load(paste(PathToHLAMod.1,file,sep=""))
-# 	JJ[["hla10"]][[mod.tag]] <- temp.model
-# }
- # Null TRT Models
-if ( !exists("JJ") ) { JJ <- list() }
-Temp.files <- grep( "Rdata$",list.files( PathToNullMod.T ), value=T )
-Temp.files.2 <- grep( "Model_Summary", Temp.files, value=T,invert=T )
-Temp.files.mods <- grep("Model",Temp.files.2, value=T,invert=F )
-Temp.files.meta <- grep("Model",Temp.files.2, value=T,invert=T )
-for ( file in Temp.files.meta ) { load(paste(PathToMod.T,file,sep="")) }
-JJ[["Null_T"]] <- list()
-for ( file in Temp.files.mods ) {
-	print(file)
-	mod.tag <- gsub( "Rdata.Model.","", gsub(".Rdata","",file, fixed=T),fixed=T)
-	print(mod.tag)
-	load(paste(PathToNullMod.T,file,sep=""))
-	JJ[["Null_T"]][[mod.tag]] <- temp.model
-}
- # Null TRT Models (w/ Correlation Structure)
-if ( !exists("JJ") ) { JJ <- list() }
-Temp.files <- grep( "Rdata$",list.files( PathToNullMod.Tc ), value=T )
-Temp.files.2 <- grep( "Model_Summary", Temp.files, value=T,invert=T )
-Temp.files.mods <- grep("Model",Temp.files.2, value=T,invert=F )
-Temp.files.meta <- grep("Model",Temp.files.2, value=T,invert=T )
-for ( file in Temp.files.meta ) { load(paste(PathToMod.Tc,file,sep="")) }
-JJ[["Null_Tc"]] <- list()
-for ( file in Temp.files.mods ) {
-	print(file)
-	mod.tag <- gsub( "Rdata.Model.","", gsub(".Rdata","",file, fixed=T),fixed=T)
-	print(mod.tag)
-	load(paste(PathToNullMod.Tc,file,sep=""))
-	JJ[["Null_Tc"]][[mod.tag]] <- temp.model
+if ( is.na(Mod.Names.1) ) { 
+	LOAD_PREV_MODS <- function( Path, Tag ) {
+		Temp.files <- grep( "Rdata$",list.files( Path ), value=T )
+		Temp.files.2 <- grep( "Model_Summary", Temp.files, value=T,invert=T )
+		Temp.files.mods <- grep("Model",Temp.files.2, value=T,invert=F )
+		Temp.files.meta <- grep("Model",Temp.files.2, value=T,invert=T )
+		# for ( file in Temp.files.meta ) { load(paste(Path,file,sep="")) }
+		OUT <- list()
+		for ( file in Temp.files.mods ) {
+			print(file)
+			mod.tag <- gsub( "Rdata.Model.","", gsub(".Rdata","",file, fixed=T),fixed=T)
+			print(mod.tag)
+			load(paste(Path,file,sep=""))
+			OUT[[mod.tag]] <- temp.model
+		}
+		return(OUT)
+	}
+	## Null Models (TRT)
+	if ( !exists("JJ") ) { JJ <- list() }
+	load.tag <- "Null_T"
+	JJ[[load.tag]] <- LOAD_PREV_MODS( PathToNullMod.T, load.tag )
+	## Null Models (TRT, w/ Corr)
+	load.tag <- "Null_Tc"
+	if ( !exists("JJ") ) { JJ <- list() }
+	JJ[[load.tag]] <- LOAD_PREV_MODS( PathToNullMod.Tc, load.tag )
+	# ## Null Models (PLAC !old!)
+	# if ( !exists("JJ") ) { JJ <- list() }
+	# JJ[[load.tag]] <- LOAD_PREV_MODS( PathToNullMod, "Null" )
+	# ## HLA Models (1)
+	# if ( !exists("JJ") ) { JJ <- list() }
+	# JJ[[load.tag]] <- LOAD_PREV_MODS( PathToHLAMod.1, "hla10" )
+
+	## Calculate WAIC of Models
+	JJ.waic <- list()
+	for ( load.tag in names(JJ) ) {
+		JJ.waic[[load.tag]] <- list()
+		for ( m.tag in names(JJ[[load.tag]]) ) {
+			print(paste(load.tag,m.tag))
+			if ( !(m.tag %in% names(JJ.waic[[load.tag]])) ) {
+				JJ.waic[[load.tag]][[m.tag]] <- WAIC( JJ[[load.tag]][[m.tag]] )	
+			}
+		}
+	}
+	save( JJ.waic, file=paste(PathToPlot,"Rdata.Null_WAIC.Rdata",sep="") )
 }
 
 ## Get unique Weeks for plotting purposes
@@ -849,6 +834,24 @@ Samps <- sample( SAMPS.short, N.Samps )
 JJ.priors <- JJ.form <- JJ.cor <- list()
 if ( !exists("JJ") ) { JJ <- JJ.time <- JJ.samps <- list() }
 
+####################################
+## Set Priors for Models ###########
+
+## Set Priors for each Variable
+JJ.priors.list <- list()
+# JJ.priors.list$Intercept <- set_prior("normal(5,1)", class="b",coef="Intercept")
+JJ.priors.list$Intercept <- set_prior("normal(5,1)", class="Intercept")
+JJ.priors.list$DRUG <- set_prior("normal(-1,1)", class="b",coef="DRUG")
+JJ.priors.list$WK <- set_prior("normal(0,.1)", class="b",coef="WK")
+JJ.priors.list$PLAC <- set_prior("normal(0,1)", class="b",coef="PLAC")
+JJ.priors.list$TRT <- set_prior("normal(0,1)", class="b",coef="TRT")
+JJ.priors.list$ACPA <- set_prior("normal(0,1)", class="b",coef="ACPA")
+JJ.priors.list$DRUG_WK <- set_prior("normal(0,.1)", class="b",coef="DRUG:WK")
+JJ.priors.list$DRUG_ACPA <- set_prior("normal(0,1)", class="b",coef="DRUG:ACPA")
+JJ.priors.list$ID.sd <- set_prior("cauchy(0,2)", class="sd",group="ID")
+JJ.priors.list$cor <- set_prior("lkj(1.5)", class="cor")
+JJ.priors.list$ar <- set_prior("normal(0,.75)", class="ar")
+
 #############################################################
 ## VALIDATE USE OF PRIORS ###################################
 #############################################################
@@ -1209,22 +1212,6 @@ if ( grepl("Null",Goal,ignore.case=T) ) {
 	MOD.priors <- MOD.form <- list()
 	JJ.priors[[tag]] <- JJ.form[[tag]] <- list()
 
-	####################################
-	## Set Priors for Models ###########
-
-	## Set Priors for each Variable
-	JJ.priors.list <- list()
-	JJ.priors.list$Intercept <- set_prior("normal(5,1)",class="b",coef="Intercept")
-	JJ.priors.list$DRUG <- set_prior("normal(-1,1)",class="b",coef="DRUG")
-	JJ.priors.list$WK <- set_prior("normal(0,.1)",class="b",coef="WK")
-	JJ.priors.list$PLAC <- set_prior("normal(0,1)",class="b",coef="PLAC")
-	JJ.priors.list$TRT <- set_prior("normal(0,1)",class="b",coef="TRT")
-	JJ.priors.list$ACPA <- set_prior("normal(0,1)",class="b",coef="ACPA")
-	JJ.priors.list$DRUG_WK <- set_prior("normal(0,.1)",class="b",coef="DRUG:WK")
-	JJ.priors.list$DRUG_ACPA <- set_prior("normal(0,1)",class="b",coef="DRUG:ACPA")
-	JJ.priors.list$ID.sd <- set_prior("cauchy(0,2)", class = "sd", group = "ID")
-	JJ.priors.list$cor <- set_prior("lkj(1.5)", class = "cor")
-
 	## Null Model Formulae & Priors
 	 # M1: Drug Only
 	m.tag <- "m1"
@@ -1326,11 +1313,11 @@ if ( grepl("Null",Goal,ignore.case=T) ) {
 		# Default Correlation Structure b/n Weeks
 		tag <- paste(tag,"c",sep="")
 		JJ.cor[[tag]] <- cor_ar( ~WK | ID, p=1, cov=F )
-		# Week within Drug Status
-		if ( grepl("dr",Goal,ignore.case=T) ) {
-			tag <- paste(tag,"d",sep="")
-			JJ.cor[[tag]] <- cor_ar( ~WK | ID:DRUG, p=1, cov=F )
-		}
+		# # Week within Drug Status
+		# if ( grepl("dr",Goal,ignore.case=T) ) {
+		# 	tag <- paste(tag,"d",sep="")
+		# 	JJ.cor[[tag]] <- cor_ar( ~WK | ID:DRUG, p=1, cov=F )
+		# }
 	}
 
 	####################################
@@ -1351,8 +1338,9 @@ if ( grepl("Null",Goal,ignore.case=T) ) {
 	JJ.samps[[tag]] <- replicate(Pr.n.iter, sample(SAMPS.short,N.Samps) )
 	save( JJ.samps, file=paste(PathToPlot,"Rdata.Samps.Rdata",sep="") )
 
-	## Run Models
 	write(paste(date(),"Model Parameters Set"), paste(PathToPlot,"Update.txt",sep=""),append=T)
+	if ( tag %in% names(JJ.cor) ) { write(paste("Cor:",as.character(JJ.cor[[tag]])[[1]]), paste(PathToPlot,"Update.txt",sep=""),append=T) }
+	## Run Models
 	print(paste("Starting:",tag))
 	print(paste("...including models:",paste(Mod.Names,collapse=",")))
 	JJ[[tag]] <- list()
@@ -1365,7 +1353,6 @@ if ( grepl("Null",Goal,ignore.case=T) ) {
 			i.tag <- paste(m.tag,"i",i,sep="")
 			print(paste("Running Model:",i.tag))
 			print(mod.form)
-			# TAB.i <- TAB[ TAB$ID%in%JJ.samps[["Null"]][,j], ]
 			TAB.i <- TAB[ TAB$ID%in%JJ.samps[[tag]][,i], ]
 			if ( i==1 ) {
 				if ( tag %in% names(JJ.cor) ) {
@@ -1546,6 +1533,98 @@ if ( grepl("HLA",Goal,ignore.case=T) ) {
 		temp.print <- paste(rownames(fixef(JJ[[tag]][[h.tag]])),round(fixef(JJ[[tag]][[h.tag]]),6),sep="=")
 		print(paste("Model:",h.tag,"- FIXEF:", temp.print ))
 		print(paste("Model:",h.tag,"- TIME:", round( JJ.time[[tag]][[h.tag]][3], 3 ) ))
+	}
+
+}
+##############################################################
+## DOWNSAMPLE MODEL ##########################################
+##############################################################
+if ( grepl("Down",Goal,ignore.case=T) ) {
+	write(paste(date(),"- Downsampling Models ######"), paste(PathToPlot,"Update.txt",sep=""),append=T)
+
+	####################################
+	## Get Models Set Up ###############
+	write(paste(date(),"Setting Model Parameters"), paste(PathToPlot,"Update.txt",sep=""),append=T)
+
+	## Down9: Drug*Week + Placebo + ACPA + Correlation Structure + Random Intercept & Drug & Placebo
+	tag <- "down9"
+	JJ.form[[tag]] <- "DAS ~ (1+DRUG+TRT|ID)+DRUG*(WK+ACPA)+TRT"
+	JJ.priors[[tag]] <- c(JJ.priors.list$Intercept,
+		JJ.priors.list$DRUG,
+		JJ.priors.list$WK,
+		JJ.priors.list$TRT,
+		JJ.priors.list$DRUG_WK,
+		JJ.priors.list$ACPA,
+		JJ.priors.list$DRUG_ACPA,
+		JJ.priors.list$ID.sd,
+		JJ.priors.list$cor )
+
+	####################################
+	## Run Models ######################
+
+	## Specify Iterations & Samples
+	N.Obs.list <- c(100,250,500,1000,2000)
+	N.iters <- 10
+	N.iters <- c( 10,8,6,4,2 )
+	N.iter.tot <- sum( N.iters )
+	j <- 1
+	which_obs <- list()
+	for ( o in 1:length(N.Obs.list) ) {
+		obs <- N.Obs.list[o]
+		obs.tag <- paste("o",obs,sep="")
+		for ( i in 1:N.iters[o] ) {
+			## Set Tag
+			i.tag <- paste(obs.tag,"i",i,sep="")
+			print(paste("Running:",i.tag))
+			## Sample from Clinical Data
+			TAB.i <- TAB[ sample(1:nrow(TAB),obs,replace=F), ]
+			TAB.i <- TAB.i[ order(TAB.i$ID,TAB.i$WK), ]
+			which_obs[[i.tag]] <- paste(TAB.i$ID,"_wk",TAB.i$WK,sep="")
+			## Run Model
+			if ( j==1 ) {
+				JJ.time[[tag]][[i.tag]] <- system.time(
+					JJ[[tag]][[i.tag]] <- brm( as.formula(JJ.form[[tag]]),
+					data=TAB.i, family=Mod.fam, chains=Mod.chain, iter=Mod.iter, warmup=Mod.warm,
+					prior=JJ.priors[[tag]] ) # , autocor=mod.cor
+				)
+				i.tag.1 <- i.tag
+			}else{
+				JJ.time[[tag]][[i.tag]] <- system.time(
+					JJ[[tag]][[i.tag]] <- update( JJ[[tag]][[i.tag.1]],
+					newdata=TAB.i, chains=Mod.chain, iter=Mod.iter, warmup=Mod.warm,
+					)
+				)
+			}
+			j <- j+1
+			write(paste(date(),"Model",i.tag,"Done"), paste(PathToPlot,"Update.txt",sep=""),append=T)
+			## Print Some Results
+			temp.print <- paste(rownames(fixef(JJ[[tag]][[i.tag]])),round(fixef(JJ[[tag]][[i.tag]]),6),sep="=")
+			print(paste("Model:",i.tag,"- FIXEF:", temp.print ))
+			print(paste("Model:",i.tag,"- TIME:", round( JJ.time[[tag]][[i.tag]][3], 3 ) ))
+			## Print Some Results
+			temp.model <- JJ[[tag]][[i.tag]]
+			save( temp.model, file=paste(PathToPlot,"Rdata.Model.",i.tag,".Rdata",sep="") )
+			save( which_obs, file=paste(PathToPlot,"Rdata.ModObs.",tag,".Rdata",sep="") )
+		}
+	}
+
+	AGGREGATE_MODS <- function( i.tag ) {
+		temp.obs <- which_obs[[i.tag]]
+		temp.obs.samp <- sapply(strsplit(temp.obs,"_"),"[",1)
+		temp.obs.dr <- TAB$DRUG[ match(temp.obs,paste(TAB$ID,"_wk",TAB$WK,sep="")) ]
+		temp.obs.id <- TAB$ID[ match(temp.obs,paste(TAB$ID,"_wk",TAB$WK,sep="")) ]
+		temp.obs.trt <- TAB$TRT[ match(temp.obs,paste(TAB$ID,"_wk",TAB$WK,sep="")) ]
+		temp.model <- JJ[[tag]][[i.tag]]
+		f.eff <- fixef(temp.model)
+		covs.f <- rownames(f.eff)
+		r.eff <- coef(temp.model)$ID
+		r.eff <- r.eff[ ,apply(r.eff,2,sd)>0 ]
+		covs.r <- colnames(r.eff)
+		r.diff <- t(t(r.eff)-f.eff[covs.r,])
+		r.dist <- apply( r.diff, 1, function(x)sqrt(sum(x^2)) )
+		m.samps <- rownames(r.eff)
+		m.obs <- table(temp.obs.samp) # unlist(lapply(m.samps,function(x)length(which(x==temp.obs.samp)) ))
+		names(m.obs) <- m.samps
 	}
 
 }
