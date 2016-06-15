@@ -128,13 +128,13 @@ if ( file.exists(Mac_Root) ) {
 
 ## Set Date
 DATE <- gsub("-","",Sys.Date())
-if ( is.na(Dir.Tag) ) { Dir.Tag <- "BayesLMM_HLA" }
+if ( is.na(Dir.Tag) ) { Dir.Tag <- "BayesLMM" }
 
 ## New Mac Paths
 PathToTypes <- paste(Root,"Janssen/Data/HLA/SOAP_HLA_Types/20151211_HLA_Types.Rdata",sep="")
 PathToAA <- paste(Root,"Janssen/Data/HLA/Amino_Acids/20160126_HLA_AA.Rdata",sep="")
 PathToRawFiles <- paste(Root,"Janssen/Data/Pheno/Raw_Files/",sep="")
-PathToAssoc <- paste(Root,"Janssen/Data/HLA/Association/20160503_HLA_Assoc_",sep="")
+PathToAssoc <- paste(Root,"Janssen/Data/HLA/Association/20160614_HLA_Assoc_",sep="")
 PathToData <- paste(Root,"Janssen/Data/Pheno/Derived/20160112_Resp_v_Time.txt",sep="")
 PathToFT <- paste(Root,"Janssen/Data/Pheno/Derived/20151015_Full_Table.txt",sep="")
 PathToDer <- paste(Root,"Janssen/Data/Pheno/Derived/20150619_Derived_Pheno_Table.txt",sep="")
@@ -142,60 +142,14 @@ PathToNullMod <- paste(Root,"Janssen/Plots_Mac/20160517_Null_All/",sep="")
 # PathToNullMod.T <- paste(Root,"Janssen/Plots_Mac/20160523_Null_TRT_421/",sep="")
 PathToNullMod.T <- paste(Root,"Janssen/Plots_Mac/20160601_Null_TRT_421/",sep="")
 PathToNullMod.Tc <- paste(Root,"Janssen/Plots_Mac/20160601_Null_TRTcor_421/",sep="")
-PathToHLAMod.1 <- paste(Root,"Janssen/Plots_Mac/20160519_HLA_Fr20/",sep="")
+# PathToHLAMod.1 <- paste(Root,"Janssen/Plots_Mac/20160519_HLA_Fr20/",sep="")
+PathToHLAMod.1 <- paste(Root,"Janssen/Plots_Mac/20160614_HLA_HapTyp/",sep="")
 PathToPlot <- paste(Root,"Janssen/Plots_Mac/",DATE,"_",Dir.Tag,"/",sep="")
 dir.create( PathToPlot )
 
 ## Previously Compiled Data
 TAB.l <- read.table( PathToData, sep="\t",header=T, stringsAsFactors=F )
 FUL <- read.table( PathToFT,sep="\t",header=T)
-
-## Load Previously Compiled Models & Data
-if ( is.na(Mod.Names.1) ) { 
-	LOAD_PREV_MODS <- function( Path, Tag ) {
-		Temp.files <- grep( "Rdata$",list.files( Path ), value=T )
-		Temp.files.2 <- grep( "Model_Summary", Temp.files, value=T,invert=T )
-		Temp.files.mods <- grep("Model",Temp.files.2, value=T,invert=F )
-		Temp.files.meta <- grep("Model",Temp.files.2, value=T,invert=T )
-		# for ( file in Temp.files.meta ) { load(paste(Path,file,sep="")) }
-		OUT <- list()
-		for ( file in Temp.files.mods ) {
-			print(file)
-			mod.tag <- gsub( "Rdata.Model.","", gsub(".Rdata","",file, fixed=T),fixed=T)
-			print(mod.tag)
-			load(paste(Path,file,sep=""))
-			OUT[[mod.tag]] <- temp.model
-		}
-		return(OUT)
-	}
-	## Null Models (TRT)
-	if ( !exists("JJ") ) { JJ <- list() }
-	load.tag <- "Null_T"
-	JJ[[load.tag]] <- LOAD_PREV_MODS( PathToNullMod.T, load.tag )
-	## Null Models (TRT, w/ Corr)
-	load.tag <- "Null_Tc"
-	if ( !exists("JJ") ) { JJ <- list() }
-	JJ[[load.tag]] <- LOAD_PREV_MODS( PathToNullMod.Tc, load.tag )
-	# ## Null Models (PLAC !old!)
-	# if ( !exists("JJ") ) { JJ <- list() }
-	# JJ[[load.tag]] <- LOAD_PREV_MODS( PathToNullMod, "Null" )
-	# ## HLA Models (1)
-	# if ( !exists("JJ") ) { JJ <- list() }
-	# JJ[[load.tag]] <- LOAD_PREV_MODS( PathToHLAMod.1, "hla10" )
-
-	## Calculate WAIC of Models
-	JJ.waic <- list()
-	for ( load.tag in names(JJ) ) {
-		JJ.waic[[load.tag]] <- list()
-		for ( m.tag in names(JJ[[load.tag]]) ) {
-			print(paste(load.tag,m.tag))
-			if ( !(m.tag %in% names(JJ.waic[[load.tag]])) ) {
-				JJ.waic[[load.tag]][[m.tag]] <- WAIC( JJ[[load.tag]][[m.tag]] )	
-			}
-		}
-	}
-	save( JJ.waic, file=paste(PathToPlot,"Rdata.Null_WAIC.Rdata",sep="") )
-}
 
 ## Get unique Weeks for plotting purposes
 WKS <- unique( TAB.l$WK )
@@ -262,7 +216,6 @@ MAKE_CLIN_TAB <- function( RESP_PHENO ) {
 RESP_PHENOS <- c("DAS","lCRP","rSJC","rTJC")
 CLIN_TABS <- lapply( RESP_PHENOS, function(x)MAKE_CLIN_TAB(x) )
 names(CLIN_TABS) <- RESP_PHENOS
-lapply(CLIN_TABS,dim)
 
 ##############################################################
 ## CREATE FUNCTIONS FOR LATER USE ############################
@@ -272,7 +225,7 @@ write(paste(date(),"- Creating Functions ######"), paste(PathToPlot,"Update.txt"
 ## FCT: Plot Model
 PLOT_MOD <- function( model, tag, plot_rand ) {
 	write(paste(date(),"Model:",tag), paste(PathToPlot,"Update.txt",sep=""),append=T)
-	## Save Model
+
 	## Collect General Model Info
 	summ <- summary(model,waic=F)
 	m.obs <- summ$nobs
@@ -497,6 +450,7 @@ PLOT_MOD <- function( model, tag, plot_rand ) {
 				Y_LNS <- seq( floor(YLIM[1]-5), ceiling(YLIM[2]+5), .5 )
 				plot( 0,0,type="n",xlim=XLIM,ylim=YLIM, xlab="Mean Estimate",ylab="BRMS Estimate",main=var )
 				abline( v=X_LNS,h=Y_LNS, lty=3,col="grey50",lwd=1 )
+				abline( 0,1 )
 				abline( h=brm.fx, col=COLS.list.2[1],lwd=4,lty=2 )
 				abline( v=mn.fx, col=COLS.list.2[2],lwd=4,lty=2 )
 				points( mg.var$brm.var ~ mg.var$mn.var, data=mg.var, pch=16,cex=1,col=COLS[3:5][factor(GRP)] )
@@ -851,6 +805,87 @@ JJ.priors.list$DRUG_ACPA <- set_prior("normal(0,1)", class="b",coef="DRUG:ACPA")
 JJ.priors.list$ID.sd <- set_prior("cauchy(0,2)", class="sd",group="ID")
 JJ.priors.list$cor <- set_prior("lkj(1.5)", class="cor")
 JJ.priors.list$ar <- set_prior("normal(0,.75)", class="ar")
+
+#############################################################
+## COMPARE PREVIOUSLY RUN MODELS ############################
+#############################################################
+if ( is.na(Mod.Names.1) ) { 
+
+	## FCT: Load Previously Compiled Models & Data
+	LOAD_PREV_MODS <- function( Path, Tag ) {
+		Temp.files <- grep( "Rdata$",list.files( Path ), value=T )
+		Temp.files.2 <- grep( "Model_Summary", Temp.files, value=T,invert=T )
+		Temp.files.mods <- grep("Model",Temp.files.2, value=T,invert=F )
+		Temp.files.meta <- grep("Model",Temp.files.2, value=T,invert=T )
+		# for ( file in Temp.files.meta ) { load(paste(Path,file,sep="")) }
+		OUT <- list()
+		for ( file in Temp.files.mods ) {
+			print(file)
+			mod.tag <- gsub( "Rdata.Model.","", gsub(".Rdata","",file, fixed=T),fixed=T)
+			print(mod.tag)
+			load(paste(Path,file,sep=""))
+			OUT[[mod.tag]] <- temp.model
+		}
+		return(OUT)
+	}
+
+	## Load Null Models (TRT)
+	if ( !exists("JJ") ) { JJ <- list() }
+	load.tag <- "Null_T"
+	JJ[[load.tag]] <- LOAD_PREV_MODS( PathToNullMod.T, load.tag )
+	## Load Null Models (TRT, w/ Corr)
+	load.tag <- "Null_Tc"
+	if ( !exists("JJ") ) { JJ <- list() }
+	JJ[[load.tag]] <- LOAD_PREV_MODS( PathToNullMod.Tc, load.tag )
+	## Load Null Models
+	load.tag <- "down9"
+	if ( !exists("JJ") ) { JJ <- list() }
+	JJ[[load.tag]] <- LOAD_PREV_MODS( "/projects/janssen/Mac_Data/Janssen/Plots_Mac/20160613_BayesLMM_HLA/", load.tag )
+	# ## Load Null Models (PLAC !old!)
+	# if ( !exists("JJ") ) { JJ <- list() }
+	# JJ[[load.tag]] <- LOAD_PREV_MODS( PathToNullMod, "Null" )
+	## Load HLA Models (1)
+	load.tag <- "HLA"
+	if ( !exists("JJ") ) { JJ <- list() }
+	JJ[[load.tag]] <- LOAD_PREV_MODS( PathToHLAMod.1, load.tag )
+
+	## Calculate WAIC of Models
+	JJ.waic <- list()
+	for ( load.tag in names(JJ) ) {
+		JJ.waic[[load.tag]] <- list()
+		for ( m.tag in names(JJ[[load.tag]]) ) {
+			print(paste(load.tag,m.tag))
+			if ( !(m.tag %in% names(JJ.waic[[load.tag]])) ) {
+				JJ.waic[[load.tag]][[m.tag]] <- WAIC( JJ[[load.tag]][[m.tag]] )	
+			}
+		}
+	}
+	save( JJ.waic, file=paste(PathToPlot,"Rdata.Null_WAIC.Rdata",sep="") )
+
+	## Plot Model Comparisons
+	XLIM <- c(1,Reduce(max,lapply(JJ.waic,length)))
+	YLIM <- Reduce( range, lapply(JJ.waic,function(x)lapply(x,function(y)y$waic)) )
+	COLS.mod <- adjustcolor(COLS.list.2,.8)[1:length(JJ)]
+	names(COLS.mod) <- names(JJ)
+	png( paste(PathToPlot,"Model_Selection.WAIC.png",sep=""), height=1200,width=1600,pointsize=36 )
+	plot( 0,0,type="n",xlim=XLIM,ylim=YLIM,xlab="Model",ylab="WAIC",main="Model Selection: WAIC" )
+	abline(h=seq(0,100e3,2e3),v=0:20, lty=3,col="grey50",lwd=1 )
+	for ( load.tag in names(JJ) ) {
+		points( 1:length(JJ.waic[[load.tag]]), unlist(lapply(JJ.waic[[load.tag]],function(y)y$waic)), type="o",pch=16,col=COLS.mod[load.tag],lwd=2 )
+	}
+	legend( "topright",pch=16,lty=1,lwd=2,col=COLS.mod,legend=names(COLS.mod) )
+	dev.off()
+
+	## Plot Model Summaries
+	for ( load.tag in names(JJ) ) {
+		for ( m.tag in names(JJ[[load.tag]]) ) {
+			file.tag <- paste(load.tag,m.tag,sep="-")
+			print(file.tag)
+			PLOT_MOD( JJ[[load.tag]][[m.tag]], file.tag, 1 )
+		}
+	}
+
+}
 
 #############################################################
 ## VALIDATE USE OF PRIORS ###################################
@@ -1258,7 +1293,7 @@ if ( grepl("Null",Goal,ignore.case=T) ) {
 		JJ.priors.list$DRUG_WK,
 		JJ.priors.list$ACPA,
 		JJ.priors.list$DRUG_ACPA )
-	 # M6: Drug*(Week+ACPA) + Placebo + Random Intercept
+	 # M7: Drug*(Week+ACPA) + Placebo + Random Intercept
 	m.tag <- "m7"
 	MOD.form[[m.tag]] <- "DAS ~ (1|ID)+DRUG*(WK+ACPA)+PLAC"
 	MOD.priors[[m.tag]] <- c(JJ.priors.list$Intercept,
@@ -1269,8 +1304,7 @@ if ( grepl("Null",Goal,ignore.case=T) ) {
 		JJ.priors.list$ACPA,
 		JJ.priors.list$DRUG_ACPA,
 		JJ.priors.list$ID.sd )
-
-	## M8: Drug + Week + Placebo + ACPA + Correlation Structure + Random Intercept & Drug & Placebo
+	 # M8: Drug*(Week+ACPA) + Placebo + Random Intercept & Drug
 	m.tag <- "m8"
 	MOD.form[[m.tag]] <- "DAS ~ (1+DRUG|ID)+DRUG*(WK+ACPA)+PLAC"
 	MOD.priors[[m.tag]] <- c(JJ.priors.list$Intercept,
@@ -1282,8 +1316,7 @@ if ( grepl("Null",Goal,ignore.case=T) ) {
 		JJ.priors.list$DRUG_ACPA,
 		JJ.priors.list$ID.sd,
 		JJ.priors.list$cor )
-
-	## M9: Drug*Week + Placebo + ACPA + Correlation Structure + Random Intercept & Drug & Placebo
+	 # M9: Drug*(Week+ACPA) + Placebo + Random Intercept & Drug & Plac
 	m.tag <- "m9"
 	MOD.form[[m.tag]] <- "DAS ~ (1+DRUG+PLAC|ID)+DRUG*(WK+ACPA)+PLAC"
 	MOD.priors[[m.tag]] <- c(JJ.priors.list$Intercept,
@@ -1399,16 +1432,28 @@ if ( grepl("Null",Goal,ignore.case=T) ) {
 if ( grepl("HLA",Goal,ignore.case=T) ) {
 	write(paste(date(),"- Building HLA Models ######"), paste(PathToPlot,"Update.txt",sep=""),append=T)
 
+	## Set Default Tag
+	tag <- "HLA"
+	# MOD.priors <- MOD.form <- list()
+	JJ.priors[[tag]] <- JJ.form[[tag]] <- list()
+
+	## Set Priors for HLA Variables
+	JJ.priors.list$HLA <- set_prior("normal(0,.3)",class="b",coef="HLA")
+	JJ.priors.list$DRUG_HLA <- set_prior("normal(0,.3)",class="b",coef="DRUG:HLA")
+
 	#########################################
 	## HLA DATA #############################
 
 	## Load HLA Types
 	HLA_AA.l <- read.table(paste(PathToAssoc,"HLA_AA_Table.txt",sep=""),header=T,sep="\t" )
 	HLA_TYP.l <- read.table(paste(PathToAssoc,"HLA_Types_Table.txt",sep=""),header=T,sep="\t" )
+	HLA_HAP.l <- read.table(paste(PathToAssoc,"HLA_Hap_Table.txt",sep=""),header=T,sep="\t" )
 	colnames(HLA_AA.l) <- gsub(".","_",colnames(HLA_AA.l),fixed=T)
 	colnames(HLA_AA.l) <- gsub("-","_",colnames(HLA_AA.l),fixed=T)
 	colnames(HLA_TYP.l) <- gsub(".","_",colnames(HLA_TYP.l),fixed=T)
 	colnames(HLA_TYP.l) <- gsub("-","_",colnames(HLA_TYP.l),fixed=T)
+	colnames(HLA_HAP.l) <- gsub(".","_",colnames(HLA_HAP.l),fixed=T)
+	colnames(HLA_HAP.l) <- gsub("-","_",colnames(HLA_HAP.l),fixed=T)
 
 	# ## Load Janssen HLA Results
 	#  # Types
@@ -1436,43 +1481,42 @@ if ( grepl("HLA",Goal,ignore.case=T) ) {
 	## HLA Tables
 	HLA_TYP <- HLA_TYP.l[ which(HLA_TYP.l$ID %in% SAMPS.short), ]
 	HLA_AA <- HLA_AA.l[ which(HLA_AA.l$ID %in% SAMPS.short), ]
+	HLA_HAP <- HLA_HAP.l[ which(HLA_HAP.l$ID %in% SAMPS.short), ]
 
 	####################################
 	## Get Models Set Up ###############
 	write(paste(date(),"Setting Model Parameters"), paste(PathToPlot,"Update.txt",sep=""),append=T)
 
-	## Set Priors for each Variable
-	 # Build Fixed Linear Model
-	MOD.fixed <- lm( DAS ~ DRUG*(WK+ACPA)+PLAC, data=TAB )
-	 # Specify Prior Distribution for each Variable
-	JJ.priors.list <- list()
-	JJ.priors.list$Intercept <- set_prior("normal(5,1)",class="b",coef="Intercept")
-	JJ.priors.list$DRUG <- set_prior("normal(-1,1)",class="b",coef="DRUG")
-	JJ.priors.list$WK <- set_prior("normal(0,.1)",class="b",coef="WK")
-	JJ.priors.list$PLAC <- set_prior("normal(0,1)",class="b",coef="PLAC")
-	JJ.priors.list$ACPA <- set_prior("normal(0,1)",class="b",coef="ACPA")
-	JJ.priors.list$DRUG_WK <- set_prior("normal(0,.1)",class="b",coef="DRUG:WK")
-	JJ.priors.list$DRUG_ACPA <- set_prior("normal(0,1)",class="b",coef="DRUG:ACPA")
-	JJ.priors.list$ID.sd <- set_prior("cauchy(0,2)",class="sd",group ="ID")
-	JJ.priors.list$cor <- set_prior("lkj(1.5)", class = "cor")
-	JJ.priors.list$HLA <- set_prior("normal(0,.2)",class="b",coef="HLA")
-	JJ.priors.list$DRUG_HLA <- set_prior("normal(0,.2)",class="b",coef="DRUG:HLA")
+	## Which HLA predictors to use?
+	Mods.hla.dat <- list()
+	 # Type
+	temp.types <- grep( "Pr4_DRB",colnames(HLA_TYP),value=T )
+	temp.types <- grep( "__",temp.types,value=T,invert=T )	
+	Mods.hla.dat$Type <- HLA_TYP[, c("ID",temp.types) ]
+	 # AA
+	temp.which_pos <- c(11,13,70:74)
+	Mods.hla.dat$AA <- HLA_AA[, c("ID",grep(paste(paste( "Pr4_DRB1_Pos_",temp.which_pos,sep="" ),collapse="|"),colnames(HLA_AA),value=T )) ]
+	 # Haps
+	temp.haps.p117174 <- c("DRE","GRQ","LEA","LRA","PAA","PRA","RRA","SEA","SKR","SRA","SRE","SRL","VEA","VKA","VRA","VRE")
+	Mods.hla.dat$p117174 <- HLA_HAP[, c("ID",temp.haps.p117174) ]
+	temp.haps.p11137174 <- c("DFRE","GYRQ","LFEA","LFRA","PRAA","PRRA","RSRA","SGRA","SGRE","SGRL","SSEA","SSKR","SSRA","SSRE","VFRA","VHEA","VHKA","VHRA","VHRE")
+	Mods.hla.dat$p11137174 <- HLA_HAP[, c("ID",temp.haps.p11137174) ]
+	temp.haps.pSE <- c("DERAA","DRRAA","DRRAL","DRRGQ","QARAA","QKRAA","QKRGR","QRRAA","QRRAE","RRRAA","RRRAE")
+	Mods.hla.dat$pSE <- HLA_HAP[, c("ID",temp.haps.pSE) ]
 
-	## HLA10: Drug*(Week+ACPA) + Placebo + Correlation Structure + Random Intercept & Drug & Placebo
-	tag <- "hla10"
-	JJ.priors[[tag]] <- c(JJ.priors.list$Intercept,
+	## HLA9: Drug*(Week+ACPA) + Placebo + Random Intercept & Drug & Plac
+	m.tag <- "hla9"
+	MOD.form <- "DAS ~ (1+DRUG+PLAC|ID)+DRUG*(WK+ACPA+HLA)+PLAC"
+	MOD.priors <- c(JJ.priors.list$Intercept,
 		JJ.priors.list$DRUG,
 		JJ.priors.list$WK,
 		JJ.priors.list$PLAC,
-		JJ.priors.list$cor,
-		JJ.priors.list$ID.sd,
-		JJ.priors.list$ACPA,
 		JJ.priors.list$DRUG_WK,
+		JJ.priors.list$ACPA,
 		JJ.priors.list$DRUG_ACPA,
-		JJ.priors.list$HLA,
-		JJ.priors.list$DRUG_HLA )
+		JJ.priors.list$ID.sd,
+		JJ.priors.list$cor )
 	JJ.cor[[tag]] <- cor_ar( ~WK | ID, p=1, cov=F )
-	JJ.form[[tag]] <- "DAS ~ (1+DRUG+PLAC|ID)+DRUG*(WK+ACPA+HLA)+PLAC"
 
 	## HLA1: Drug Only (Simple Model for Testing Purposes)
 	# tag <- "hla1"
@@ -1481,58 +1525,211 @@ if ( grepl("HLA",Goal,ignore.case=T) ) {
 	# # JJ.cor[[tag]] <- cor_ar( ~WK | ID, p=1, cov=F )
 	# JJ.form[[tag]] <- "DAS ~ DRUG"
 
+	## FCT: Modify Priors & Formula for various HLA Predictiors
+	Modify_HLA_Inputs <- function( mod.name ) {
+		## Pull Predictor Info
+		hla.data <- Mods.hla.dat[[mod.name]]
+		hla.predictors <- colnames(hla.data)[-1]
+		## Modify Formula
+		hla.form.preds <- paste(hla.predictors,collapse="+")
+		OUT.form <- gsub( "HLA",hla.form.preds,MOD.form )
+		## Modify Priors
+		OUT.priors <- MOD.priors
+		for ( hla.pred in hla.predictors ) {
+			OUT.priors <- rbind( OUT.priors, JJ.priors.list$HLA, JJ.priors.list$DRUG_HLA )
+			OUT.priors[which(OUT.priors$coef=="HLA"),"coef"] <- hla.pred
+			OUT.priors[which(OUT.priors$coef=="DRUG:HLA"),"coef"] <- paste("DRUG:",hla.pred,sep="")
+		}
+		## Return Modified Formula/Priors
+		OUT <- list( Formula=OUT.form, Priors=OUT.priors, Data=hla.data )
+		return(OUT)
+	}
+
 	####################################
 	## Run Models ######################
 
-	## Specific HLA Alleles to Test
-	HLA.drb.all <- grep("Pr4_DRB1",colnames(HLA_TYP),value=T)
-	HLA.drb.all.freq <- apply( HLA_TYP[,HLA.drb.all], 2, sum )
-	HLA.drb <- HLA.drb.all[ HLA.drb.all.freq > 20 ]
-	HLA.N <- length(HLA.drb)
-
-	## Merge Clinical Table w/ HLA Table
-	TAB.hla <- merge( TAB, HLA_TYP[,c("ID",HLA.drb)], by="ID" )
+	# ## Specific HLA Alleles to Test
+	# HLA.drb.all <- grep("Pr4_DRB1",colnames(HLA_TYP),value=T)
+	# HLA.drb.all.freq <- apply( HLA_TYP[,HLA.drb.all], 2, sum )
+	# HLA.drb <- HLA.drb.all[ HLA.drb.all.freq > 20 ]
+	# HLA.N <- length(HLA.drb)
+	# ## Merge Clinical Table w/ HLA Table
+	# TAB.hla <- merge( TAB, HLA_TYP[,c("ID",HLA.drb)], by="ID" )
 
 	## Specify Iterations & Samples
 	# N.Samps <- 421
-	# if ( !exists("JJ.samps") ) {
 	JJ.samps[[tag]] <- sample(SAMPS.short,N.Samps)
 	save( JJ.samps, file=paste(PathToPlot,"Rdata.Samps.Rdata",sep="") )
-	# }
 
 	## Run Models
 	write(paste(date(),"Model Parameters Set"), paste(PathToPlot,"Update.txt",sep=""),append=T)
-	JJ[[tag]] <- JJ.time[[tag]] <- list()
-	for ( h in 1:HLA.N ) {
-		# h.tag <- paste(tag,"h",h,sep="")
-		h.tag <- HLA.drb[h]
-		mod.form <- as.formula( JJ.form[[tag]] )
-		mod.prior <- JJ.priors[[tag]]
-		print(paste("Running Model:",h.tag))
-
+	if ( !exists("JJ") ) { JJ[[tag]] <- JJ.time[[tag]] <- list() }
+	for ( m in 1:length(Mod.Names) ) {
+		mod <- Mod.Names[m]
+		m.tag <- paste("hla",mod,sep="_")
+		mod.inputs <- Modify_HLA_Inputs( mod )
+		# Specify Model Parameters/Data
+		JJ.priors[[tag]][[m.tag]] <- mod.inputs$Priors
+		JJ.form[[tag]][[m.tag]] <- mod.inputs$Formula
+		HLA.dat <- mod.inputs$Data
+		TAB.hla <- merge( TAB, HLA.dat, by="ID" )
 		TAB.h <- TAB.hla[ TAB.hla$ID%in%JJ.samps[[tag]], ]
-		colnames(TAB.h)[grep(h.tag,colnames(TAB.h))] <- "HLA"
-		if ( tag %in% names(JJ.cor) ) {
-			mod.cor <- JJ.cor[[tag]]
-			JJ.time[[tag]][[h.tag]] <- system.time(
-				JJ[[tag]][[h.tag]] <- brm( mod.form,
-				data=TAB.h, family=Mod.fam, chains=Mod.chain, iter=Mod.iter, warmup=Mod.warm,
-	            prior=mod.prior, autocor=mod.cor )
-			)
-		}else{
-			JJ.time[[tag]][[h.tag]] <- system.time(
-				JJ[[tag]][[h.tag]] <- brm( mod.form,
-				data=TAB.h, family=Mod.fam, chains=Mod.chain, iter=Mod.iter, warmup=Mod.warm,
-	            prior=mod.prior )
-			)
-		}
-		write(paste(date(),"Model",h.tag,"Done"), paste(PathToPlot,"Update.txt",sep=""),append=T)
-		temp.model <- JJ[[tag]][[h.tag]]
-		save( temp.model, file=paste(PathToPlot,"Rdata.Model.",h.tag,".Rdata",sep="") )
+
+		# Run Model
+		mod.form <- as.formula( JJ.form[[tag]][[m.tag]] )
+		mod.prior <- JJ.priors[[tag]][[m.tag]]
+		mod.cor <- JJ.cor[[tag]]
+		print(paste("Running Model:",m.tag)) ; print(mod.form)
+		JJ.time[[tag]][[m.tag]] <- system.time(
+			JJ[[tag]][[m.tag]] <- brm( mod.form,
+			data=TAB.h, family=Mod.fam, chains=Mod.chain, iter=Mod.iter, warmup=Mod.warm,
+            prior=mod.prior, autocor=mod.cor )
+		)
+
+		## Save Model Output
+		write(paste(date(),"Model",m.tag,"Done"), paste(PathToPlot,"Update.txt",sep=""),append=T)
+		temp.model <- JJ[[tag]][[m.tag]]
+		save( temp.model, file=paste(PathToPlot,"Rdata.Model.",m.tag,".Rdata",sep="") )
 		## Print Some Results
-		temp.print <- paste(rownames(fixef(JJ[[tag]][[h.tag]])),round(fixef(JJ[[tag]][[h.tag]]),6),sep="=")
-		print(paste("Model:",h.tag,"- FIXEF:", temp.print ))
-		print(paste("Model:",h.tag,"- TIME:", round( JJ.time[[tag]][[h.tag]][3], 3 ) ))
+		temp.print <- paste(rownames(fixef(JJ[[tag]][[m.tag]])),round(fixef(JJ[[tag]][[m.tag]]),6),sep="=")
+		print(paste("Model:",m.tag,"- FIXEF:", temp.print ))
+		print(paste("Model:",m.tag,"- TIME:", round( JJ.time[[tag]][[m.tag]][3], 3 ) ))
+
+	}
+
+	## Compile & Plot Results
+	# Mod.Names <- sapply(strsplit( names(JJ[[tag]]),"_"),"[",2 )
+	for ( m in 1:length(Mod.Names) ) {
+		mod <- Mod.Names[m]
+		m.tag <- paste("hla",mod,sep="_")
+		model <- JJ[[tag]][[m.tag]]
+		summ <- summary(model,waic=F)
+		
+		## Collect HLA Info
+		mod.inputs <- Modify_HLA_Inputs( mod )
+		hla.preds <- setdiff( colnames(mod.inputs$Data), "ID" )
+		hla.freqs <- colSums( mod.inputs$Data[,-1] )
+		if ( mod=="Type" ) {
+			gene.tag <- "DRB1"
+			hla.tags <- gsub("_",":",gsub("Pr4_DRB1_","",hla.preds ))
+		}else{ hla.tags <- hla.preds }
+		
+		## Collect General Model Info
+		m.obs <- summ$nobs
+		m.iter <- summ$iter
+		m.warm <- summ$warmup
+		m.chain <- summ$chains
+		# m.waic <- summ$WAIC
+		m.pheno <- as.character(model$formula)[2]
+		m.covs <- as.character(model$formula)[3]
+		m.form <- paste( m.pheno, "~", m.covs )
+		RAND <- length(summ$random)>0
+
+		## Collect Model Outputs
+		f.eff <- summ$fixed
+		c.eff <- summ$cor_pars
+		s.eff <- summ$spec_pars
+		m.covs.f <- rownames(f.eff)
+		all.eff <- list( f.eff, c.eff, s.eff )
+		mod.fit <- Reduce( rbind, all.eff )
+		mod.fit <- data.frame( mod.fit, Eff=rep(c("F","C","S"),lapply(all.eff,nrow)), stringsAsFactors=F )
+		 # Posterior Probabilities
+		d.prior <- model$prior
+		d.post <- posterior_samples(model)
+		d.post.f.which <- paste("b_",m.covs.f,sep="")
+		d.post.c.which <- rownames(c.eff)
+		d.post.prob <- data.frame( F.eff=d.post.f.which, Pr_l0=round(unlist(lapply( d.post.f.which,function(x)length(which(d.post[,x]>0)) )) / 7200, 2) )
+		d.post.prob.rank <- order( abs(d.post.prob$Pr_l0-.5), decreasing=T )
+
+		## PLOTS ########
+
+		## Plot Severity vs Response
+		# COLS.temp <- COLS.list.2[c(1,4)]
+		COLS.temp <- COLS.list.2[c(6,1)]
+		png( paste(PathToPlot,"HLA-",m.tag,".1-RespVsSev.png",sep=""), height=1200,width=1200,pointsize=32 )
+		# png( paste(PathToPlot,"HLA-",m.tag,".1-RespVsSev.png",sep=""), height=1200,width=2400,pointsize=32 ) ; par(mfrow=c(1,2))
+		## Plot Betas
+		XVALS <- f.eff[hla.preds,"Estimate"]
+		YVALS <- f.eff[paste("DRUG:",hla.preds,sep=""),"Estimate"]
+		XLIM <- extendrange( XVALS )
+		YLIM <- extendrange( YVALS )
+		plot( 0,0,type="n",xlim=XLIM,ylim=YLIM, xlab="Disease Severity",ylab="Drug Response",main=paste("HLA Allele Effect Sizes:",m.tag) )
+		abline( h=seq(-5,5,.1),v=seq(-5,5,.1),lty=3,col="grey50",lwd=1 )
+		abline( h=0,v=0 )
+		points( XVALS, YVALS, pch=16,col=adjustcolor(COLS.temp[1],.5),cex=2*log10(1+hla.freqs) )
+		text( XVALS, YVALS, hla.tags, pos=3,cex=.8 )
+		 # Trend Line
+		MOD <- lm( YVALS ~ XVALS, weights=hla.freqs )
+		PVAL <- summary(MOD)$coefficients["XVALS","Pr(>|t|)"]
+		abline( MOD, lty=2,lwd=6,col=COLS.temp[1] )
+		text( XLIM[1],YLIM[1],paste("p=",formatC(PVAL,3,format="e"),sep=""), pos=4 )
+		# ## Plot Posterior Probs
+		# XVALS <- d.post.prob[d.post.prob$F.eff%in%paste("b_",hla.preds,sep=""),"Pr_l0"]
+		# YVALS <- d.post.prob[d.post.prob$F.eff%in%paste("b_DRUG:",hla.preds,sep=""),"Pr_l0"]
+		# XLIM <- c(0,1) # extendrange( XVALS )
+		# YLIM <- c(0,1) # extendrange( YVALS )
+		# plot( 0,0,type="n",xlim=XLIM,ylim=YLIM, xlab="Disease Severity",ylab="Drug Response",main=paste("HLA Allele Posterior Probabilities (B>0):",m.tag),xaxt="n",yaxt="n" )
+		# axis( 1, at=seq(0,1,.1) )
+		# axis( 2, at=seq(0,1,.1), las=2 )
+		# abline( h=seq(0,1,.1),v=seq(0,1,.1),lty=3,col="grey50",lwd=1 )
+		# abline( h=.5,v=.5 )
+		# points( XVALS, YVALS, pch=16,col=adjustcolor(COLS.temp[2],.5),cex=2*log10(1+hla.freqs) )
+		# text( XVALS, YVALS, hla.tags, pos=3,cex=.8 )
+		#  # Trend Line
+		# MOD <- lm( YVALS ~ XVALS )
+		# PVAL <- summary(MOD)$coefficients["XVALS","Pr(>|t|)"]
+		# abline( MOD, lty=2,lwd=6,col=COLS.temp[2] )
+		# text( XLIM[1],YLIM[1],paste("p=",formatC(PVAL,3,format="e"),sep=""), pos=4 )
+		dev.off()
+
+		## Fixed Effect Sizes
+		temp.n <- 25
+		mod.fit.f <- mod.fit[m.covs.f,][d.post.prob.rank[1:temp.n],]
+		mod.fit.f.names <- gsub("_",":",gsub( "Pr4_DRB1_","DRB1*",rownames(mod.fit.f) ))
+		YLIM <- extendrange(mod.fit.f[,"Estimate"], f=.2)
+		png( paste(PathToPlot,"HLA-",m.tag,".2-EffSize.png",sep=""), height=1000,width=400+50*nrow(mod.fit.f),pointsize=26)
+		par(mar=c( 8,5,5,3 ))
+		TEMP <- 1:nrow(mod.fit.f)
+		plot( 0,0,type="n", xaxt="n",yaxt="n",xlim=range(TEMP),ylim=YLIM,xlab="",ylab="Effect Size",main="Effect Size Estimates" )
+		axis( 1, at=TEMP,label=mod.fit.f.names, las=2 )
+		axis( 2, at=seq(-10,10,2), las=2 )
+		abline( h=-10:10, lty=3,col="grey50",lwd=1 )
+		abline( h=0, lty=1,col="black",lwd=1 )
+		 # Plot Prior Distributions
+		for ( v in 1:nrow(mod.fit.f) ) {
+			var <- rownames(mod.fit.f)[v]
+			if ( var %in% m.covs.f ) {
+				if ( var=="Intercept" ) {
+					temp.priors <- as.numeric(strsplit( gsub(")","",gsub("normal(","",d.prior[d.prior$class=="temp_Intercept","prior"], fixed=T),fixed=T),"," )[[1]])
+				}else{
+					temp.priors <- as.numeric(strsplit( gsub(")","",gsub("normal(","",d.prior[d.prior$coef==var,"prior"], fixed=T),fixed=T),"," )[[1]])
+				}
+				if ( length(temp.priors)==2 ) {
+					names(temp.priors) <- c("Mean","SD")
+					vioplot( rnorm(1e4,temp.priors["Mean"],temp.priors["SD"]), at=TEMP[v],col=adjustcolor("black",alpha=.2),border=NA,add=T,drawRect=F )	
+				}
+			}
+		}
+		 # Plot Posterior Distributions
+		COLS.temp <- adjustcolor(COLS.list.2[c(5,4)][factor(grepl("DRUG",mod.fit.f.names))],.8)
+		for ( v in 1:nrow(mod.fit.f) ) {
+			var <- rownames(mod.fit.f)[v]
+			var.tag <- var
+			if ( var %in% m.covs.f ) { var.tag <- paste("b",var,sep="_") }
+			if ( grepl("sd(",var,fixed=T) ) { var.tag <- gsub(")","", gsub("sd(",paste("sd_",r.grp,"_",sep=""),var,fixed=T),fixed=T) }
+			if ( grepl("cor(",var,fixed=T) ) { var.tag <- gsub(",","_", gsub(")","", gsub("cor(",paste("cor_",r.grp,"_",sep=""),var,fixed=T),fixed=T),fixed=T) }
+			if ( var==paste("sigma(",m.pheno,")",sep="") ) { var.tag <- paste("sigma",m.pheno,sep="_") }
+			if ( var.tag %in% colnames(d.post) ) {
+				# vioplot( d.post[,var.tag], at=TEMP[v],col=adjustcolor(COLS.beta,.8),add=T,drawRect=F )
+				vioplot( d.post[,var.tag], at=TEMP[v],col=COLS.temp[v],add=T,drawRect=F )
+			}
+		}
+		arrows( TEMP,mod.fit.f[,"l.95..CI"],TEMP,mod.fit.f[,"u.95..CI"],lwd=3,length=0 )
+		arrows( TEMP-diff(TEMP)[1]/2*.6,mod.fit.f[,"Estimate"],TEMP+diff(TEMP)[1]/2*.6,mod.fit.f[,"Estimate"],lwd=3,length=0 )
+		legend("topright",fill=c(adjustcolor("black",alpha=.2),unique(COLS.temp)),border=NA,legend=c("Prior","Non-Drug Effect","Drug Effect"),ncol=3,title="Effect Type",bg="white")
+		temp.text <- abs(.5 - round(d.post.prob$Pr_l0,2)[d.post.prob.rank[1:temp.n]]) + .5
+		text( TEMP, YLIM[1], temp.text )
+		dev.off()
 	}
 
 }
@@ -1565,11 +1762,17 @@ if ( grepl("Down",Goal,ignore.case=T) ) {
 	## Specify Iterations & Samples
 	N.Obs.list <- c(100,250,500,1000,2000)
 	N.iters <- 10
-	N.iters <- c( 10,8,6,4,2 )
+	N.iters <- c( 10,8,6,4,2 ) # / 2
 	N.iter.tot <- sum( N.iters )
 	j <- 1
 	which_obs <- list()
+	 # Samples
+	which_obs <- lapply( 1:length(N.iters), function(x)replicate(N.iters[x],sample(1:nrow(TAB),N.Obs.list[x],replace=F)) )
+	# names(which_obs) <- paste("o",rep(N.Obs.list,N.iters),"i",unlist(lapply(N.iters,function(x)1:x)),sep="")
+	names(which_obs) <- obs.tag <- paste("o",N.Obs.list,sep="")
+
 	for ( o in 1:length(N.Obs.list) ) {
+	# for ( o in 2:length(N.Obs.list) ) {
 		obs <- N.Obs.list[o]
 		obs.tag <- paste("o",obs,sep="")
 		for ( i in 1:N.iters[o] ) {
@@ -1577,9 +1780,10 @@ if ( grepl("Down",Goal,ignore.case=T) ) {
 			i.tag <- paste(obs.tag,"i",i,sep="")
 			print(paste("Running:",i.tag))
 			## Sample from Clinical Data
-			TAB.i <- TAB[ sample(1:nrow(TAB),obs,replace=F), ]
-			TAB.i <- TAB.i[ order(TAB.i$ID,TAB.i$WK), ]
-			which_obs[[i.tag]] <- paste(TAB.i$ID,"_wk",TAB.i$WK,sep="")
+			# TAB.i <- TAB[ sample(1:nrow(TAB),obs,replace=F), ]
+			# TAB.i <- TAB.i[ order(TAB.i$ID,TAB.i$WK), ]
+			# which_obs[[i.tag]] <- paste(TAB.i$ID,"_wk",TAB.i$WK,sep="")
+			TAB.i <- TAB[ sort(which_obs[[obs.tag]][,i]), ]
 			## Run Model
 			if ( j==1 ) {
 				JJ.time[[tag]][[i.tag]] <- system.time(
@@ -1609,11 +1813,19 @@ if ( grepl("Down",Goal,ignore.case=T) ) {
 	}
 
 	AGGREGATE_MODS <- function( i.tag ) {
-		temp.obs <- which_obs[[i.tag]]
-		temp.obs.samp <- sapply(strsplit(temp.obs,"_"),"[",1)
-		temp.obs.dr <- TAB$DRUG[ match(temp.obs,paste(TAB$ID,"_wk",TAB$WK,sep="")) ]
-		temp.obs.id <- TAB$ID[ match(temp.obs,paste(TAB$ID,"_wk",TAB$WK,sep="")) ]
-		temp.obs.trt <- TAB$TRT[ match(temp.obs,paste(TAB$ID,"_wk",TAB$WK,sep="")) ]
+		tag.split <- strsplit(i.tag,"i")[[1]]
+		temp.obs.ind <- sort( which_obs[[tag.split[1]]][,as.numeric(tag.split[2])] )
+		tab.obs <- TAB[ temp.obs.ind, ]
+		temp.obs.samp <- as.character( tab.obs$ID )
+		temp.obs.dr <- tab.obs$DRUG
+		temp.obs.tr <- tab.obs$TRT
+		# temp.obs <- paste( TAB$ID[temp.obs.ind], TAB$WK[temp.obs.ind], sep="_")
+		# print(head(temp.obs))
+		# temp.obs.samp <- sapply(strsplit(temp.obs,"_"),"[",1)
+		# tab.obs <- TAB[ match(temp.obs,paste(TAB$ID,"_wk",TAB$WK,sep="")), ]
+		# temp.obs.dr <- TAB$DRUG[ match(temp.obs,paste(TAB$ID,"_wk",TAB$WK,sep="")) ]
+		# temp.obs.id <- TAB$ID[ match(temp.obs,paste(TAB$ID,"_wk",TAB$WK,sep="")) ]
+		# temp.obs.trt <- TAB$TRT[ match(temp.obs,paste(TAB$ID,"_wk",TAB$WK,sep="")) ]
 		temp.model <- JJ[[tag]][[i.tag]]
 		f.eff <- fixef(temp.model)
 		covs.f <- rownames(f.eff)
@@ -1622,10 +1834,20 @@ if ( grepl("Down",Goal,ignore.case=T) ) {
 		covs.r <- colnames(r.eff)
 		r.diff <- t(t(r.eff)-f.eff[covs.r,])
 		r.dist <- apply( r.diff, 1, function(x)sqrt(sum(x^2)) )
-		m.samps <- rownames(r.eff)
 		m.obs <- table(temp.obs.samp) # unlist(lapply(m.samps,function(x)length(which(x==temp.obs.samp)) ))
-		names(m.obs) <- m.samps
+		m.obs.dr <- aggregate( temp.obs.dr, by=list(samp=temp.obs.samp), sum )
+		m.obs.tr <- aggregate( temp.obs.tr, by=list(samp=temp.obs.samp), sum )
+		m.samps <- names(m.obs)
+		mod.tab <- merge( data.frame(Diff=abs(r.diff),Dist=r.dist), data.frame(m.obs,Obs.dr=m.obs.dr[,-1],Obs.tr=m.obs.tr[,-1]), by.x="row.names",by.y="temp.obs.samp" )
+		mods.out <- apply( mod.tab[,2:5], 2, function(x) lm(x ~ mod.tab$Freq ) )
+		mods.out$Dr <- lm( mod.tab$Diff.DRUG ~ mod.tab$Obs.dr )
+		# print( summary(mods.out$Dist) )
+		# lapply( mods.out, summary )
+
+		## Compile Outputs
+		OUT <- list( Table=mod.tab, Models=mods.out )
 	}
+	lapply( names(JJ[[tag]]), function(x)AGGREGATE_MODS(x) )
 
 }
 ##############################################################
